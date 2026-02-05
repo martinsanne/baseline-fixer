@@ -29,68 +29,56 @@ def _import_fix_function():
     except ImportError:
         # If import fails, define the function inline as fallback
         # This ensures the function works even if the module can't be imported
-        def find_ymax_ymin(font):
-            """Find the largest ymax and lowest ymin values in the font."""
+        def get_font_ymax_ymin(font):
             ymax = None
             ymin = None
-            
-            for glyph_name in font.getGlyphSet().keys():
-                glyph = font['glyf'][glyph_name] if 'glyf' in font else None
-                if glyph and hasattr(glyph, 'yMax') and hasattr(glyph, 'yMin'):
-                    if ymax is None or glyph.yMax > ymax:
-                        ymax = glyph.yMax
-                    if ymin is None or glyph.yMin < ymin:
-                        ymin = glyph.yMin
-            
-            # Fallback to hhea values if no glyphs found
-            if ymax is None:
+            if 'glyf' in font:
+                for glyph_name in font.getGlyphSet().keys():
+                    glyph = font['glyf'][glyph_name]
+                    if glyph and hasattr(glyph, 'yMax') and hasattr(glyph, 'yMin'):
+                        if ymax is None or glyph.yMax > ymax:
+                            ymax = glyph.yMax
+                        if ymin is None or glyph.yMin < ymin:
+                            ymin = glyph.yMin
+            if 'head' in font:
+                head = font['head']
+                if ymax is None and hasattr(head, 'yMax'):
+                    ymax = head.yMax
+                if ymin is None and hasattr(head, 'yMin'):
+                    ymin = head.yMin
+            if ymax is None or ymin is None:
                 hhea = font['hhea']
-                ymax = hhea.ascent
-            if ymin is None:
-                hhea = font['hhea']
-                ymin = hhea.descent
-            
+                if ymax is None:
+                    ymax = hhea.ascent
+                if ymin is None:
+                    ymin = hhea.descent
             return ymax, ymin
-        
+
         def fix_vertical_metrics(input_path, output_path, flavor=None):
-            """Fix vertical metrics in a font file."""
             if not os.path.exists(input_path):
                 raise FileNotFoundError(f"Input file not found: {input_path}")
-            
-            # Load the font
             font = TTFont(input_path)
-            
-            # Get hhea table values
             hhea = font['hhea']
-            hhea_ascent = hhea.ascent
-            hhea_descent = hhea.descent
-            hhea_linegap = hhea.lineGap
-            
-            # Get OS/2 table
             if 'OS/2' not in font:
                 raise ValueError("Font does not contain OS/2 table")
-            
             os2 = font['OS/2']
-            
-            # Set fsSelect bit 7 to 1 (USE_TYPO_METRICS)
-            os2.fsSelection |= (1 << 7)  # Set bit 7
-            
-            # Sync OS/2 typo metrics with hhea metrics
-            os2.sTypoAscender = hhea_ascent
-            os2.sTypoDescender = hhea_descent
-            os2.sTypoLineGap = hhea_linegap
-            
-            # Find ymax and ymin from glyphs
-            ymax, ymin = find_ymax_ymin(font)
-            
-            # Set OS/2 win metrics to match actual glyph bounds
+            ymax, ymin = get_font_ymax_ymin(font)
+            hhea.ascent = ymax
+            hhea.descent = ymin
+            os2.fsSelection |= (1 << 7)
+            os2.sTypoAscender = hhea.ascent
+            os2.sTypoDescender = hhea.descent
+            os2.sTypoLineGap = hhea.lineGap
             os2.usWinAscent = ymax
-            os2.usWinDescent = abs(ymin) if ymin < 0 else ymin
-            
-            # Save the font (set flavor on the font object; save() does not accept flavor=)
+            if hasattr(os2, 'winAscent'):
+                os2.winAscent = ymax
+            us_win_descent = (-ymin) if ymin < 0 else ymin
+            os2.usWinDescent = us_win_descent
+            if hasattr(os2, 'winDescent'):
+                os2.winDescent = us_win_descent
             font.flavor = flavor if flavor else None
             font.save(output_path)
-        
+
         return fix_vertical_metrics
 
 # Import the fix function
