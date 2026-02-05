@@ -1,0 +1,16 @@
+# Ignore virtual environment
+venv/
+env/
+ENV/
+
+# Ignore local font files (but keep the structure)
+*.ttf
+*.woff
+*.woff2
+*.otf
+*.ttx
+!test-fonts/
+
+# Development files
+.DS_Store
+.vscode/

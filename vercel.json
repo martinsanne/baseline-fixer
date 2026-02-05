@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm install && npm run build",
+  "installCommand": "npm install",
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.9"
+    }
+  }
+}

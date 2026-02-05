@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "python3",
+  "python.linting.enabled": true,
+  "editor.formatOnSave": true
+}
