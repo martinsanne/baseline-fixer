@@ -13,10 +13,10 @@ A web application and CLI tool to fix inconsistent vertical metrics in font file
 
 This tool fixes vertical metrics in font files by:
 
-1. Setting the `USE_TYPO_METRICS` flag (fsSelect bit 7)
-2. Syncing OS/2 typo metrics with hhea metrics
-3. Setting OS/2 win metrics to match actual glyph bounds
-4. Ensuring consistent rendering across Windows, macOS, and browsers
+1. Setting the 8th bit of fsSelection to 1
+2. Setting ascent and sTypoAscender to the average of their current values (rounded)
+3. Setting descent and sTypoDescender to the average of their current values (rounded)
+4. Setting the head table FontBBox (xMin, yMin, xMax, yMax) to match the font’s glyph bounds
 
 ## Installation
 
@@ -159,15 +159,12 @@ Then visit http://localhost:3000
 
 ## Notes
 
-The instructions in [Max Kohler's guide](https://www.maxkohler.com/posts/2022-02-19-fixing-vertical-metrics/) for changing values in the .ttx file does not always work. Here's an updated version:
+The app applies the following vertical-metrics rules:
 
-- the eighth character of the <fsSelection /> value must be set to 1
-- The value prop in <sTypoAscender /> must be equal to the value in <ascent> inside <hhea> (<hhea><ascent /></hhea>)
-- The value prop in <sTypoDescender /> must be equal to the value in <descent> inside <hhea> (<hhea><descent /></hhea>)
-- The value prop in <sTypoLinegap /> must be equal to the value in <lineGap> inside <hhea> (<hhea><lineGap /></hhea>)
-- The value prop in <usWinAscent> and/or <winAscent> (if exists) must be equal to the largest <ymax/> value in the font (normally defined in <head><ymax /></head>)
-- The value prop in <usWinDescent> and/or <winDescent> must be equal to the lowest <yMin /> in the font multiplied by -1 (eg <yMin value=“-200”/>, <usWinDescent value="200"/>
-- The value prop in <sTypoAscender /> and <ascent /> (<hhea><ascent /></hhea>) must be equal to the highest <yMax />
+- The **eighth bit** of <fsSelection /> must be set to 1.
+- <sTypoAscender /> and <ascent> (in hhea) = **average** of current ascent + sTypoAscender, rounded to integer (e.g. (750 + 1060) / 2 → 905).
+- <sTypoDescender /> and <descent> = **average** of current descent + sTypoDescender, rounded to integer (e.g. (-250 + -200) / 2 → -225).
+- <FontBBox> (in head) must match the font bounds: **(xMin, yMin, xMax, yMax)** from the glyph outlines (e.g. FontBBox value="-166 -225 1074 905" = xMin=-166, yMin=-225, xMax=1074, yMax=905).
 
 ## License
 

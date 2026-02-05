@@ -17,52 +17,50 @@ from fontTools.ttLib.tables import _h_m_t_x
 import os
 
 
-def get_font_ymax_ymin(font):
+def get_font_bbox(font):
     """
-    Get the largest yMax and lowest yMin in the font.
-    Uses glyph bounds; falls back to head table (head.yMax / head.yMin) then hhea.
+    Get the font bounding box (xMin, yMin, xMax, yMax) from glyph outlines.
+    Falls back to head table if no glyph bounds.
     """
-    ymax = None
+    xmin = None
     ymin = None
+    xmax = None
+    ymax = None
 
-    # From glyph outlines (glyf table)
     if 'glyf' in font:
         for glyph_name in font.getGlyphSet().keys():
             glyph = font['glyf'][glyph_name]
-            if glyph and hasattr(glyph, 'yMax') and hasattr(glyph, 'yMin'):
-                if ymax is None or glyph.yMax > ymax:
-                    ymax = glyph.yMax
+            if glyph and hasattr(glyph, 'xMin'):
+                if xmin is None or glyph.xMin < xmin:
+                    xmin = glyph.xMin
+                if xmax is None or glyph.xMax > xmax:
+                    xmax = glyph.xMax
                 if ymin is None or glyph.yMin < ymin:
                     ymin = glyph.yMin
+                if ymax is None or glyph.yMax > ymax:
+                    ymax = glyph.yMax
 
-    # Fallback: head table (normally defines font bbox)
     if 'head' in font:
         head = font['head']
-        if ymax is None and hasattr(head, 'yMax'):
-            ymax = head.yMax
+        if xmin is None and hasattr(head, 'xMin'):
+            xmin = head.xMin
+        if xmax is None and hasattr(head, 'xMax'):
+            xmax = head.xMax
         if ymin is None and hasattr(head, 'yMin'):
             ymin = head.yMin
+        if ymax is None and hasattr(head, 'yMax'):
+            ymax = head.yMax
 
-    # Fallback: hhea
-    if ymax is None or ymin is None:
-        hhea = font['hhea']
-        if ymax is None:
-            ymax = hhea.ascent
-        if ymin is None:
-            ymin = hhea.descent
-
-    return ymax, ymin
+    return xmin, ymin, xmax, ymax
 
 
 def fix_vertical_metrics(input_path, output_path, flavor=None):
     """
     Fix vertical metrics per spec:
-    - fsSelection 8th bit = 1
-    - sTypoAscender and hhea ascent = highest yMax in the font
-    - sTypoDescender and hhea descent = lowest yMin in the font
-    - sTypoLineGap = hhea lineGap
-    - usWinAscent / winAscent = highest yMax
-    - usWinDescent / winDescent = lowest yMin * -1 (positive)
+    - fsSelection: 8th bit (character) = 1
+    - sTypoAscender and ascent = average(ascent, sTypoAscender) rounded to integer
+    - sTypoDescender and descent = average(descent, sTypoDescender) rounded to integer
+    - FontBBox (head) = (xMin, yMin, xMax, yMax) from glyph bounds
     """
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
@@ -73,41 +71,35 @@ def fix_vertical_metrics(input_path, output_path, flavor=None):
         raise ValueError("Font does not contain OS/2 table")
     os2 = font['OS/2']
 
-    # 1) Largest yMax and lowest yMin in the font
-    ymax, ymin = get_font_ymax_ymin(font)
+    # 1) fsSelection: eighth bit = 1 (bit 7, 0-based; 8th bit from right)
+    os2.fsSelection |= (1 << 7)
 
-    # 2) hhea: ascent = highest yMax, descent = lowest yMin (sTypoAscender/sTypoDescender will match)
-    hhea.ascent = ymax   # sTypoAscender and ascent must equal highest yMax
-    hhea.descent = ymin  # ymin is typically negative
-    # hhea.lineGap unchanged unless we want to force 0
+    # 2) sTypoAscender and ascent = average of current ascent + sTypoAscender, rounded
+    new_ascent = round((hhea.ascent + os2.sTypoAscender) / 2)
+    hhea.ascent = new_ascent
+    os2.sTypoAscender = new_ascent
 
-    # 3) fsSelection: eighth bit = 1 (counting from left, MSB=1st; 8th bit = bit index 8)
-    os2.fsSelection |= (1 << 8)
+    # 3) sTypoDescender and descent = average of current descent + sTypoDescender, rounded
+    new_descent = round((hhea.descent + os2.sTypoDescender) / 2)
+    hhea.descent = new_descent
+    os2.sTypoDescender = new_descent
 
-    # 4) OS/2 typo = hhea (sTypoAscender = ascent = highest yMax; sTypoDescender = descent = lowest yMin)
-    os2.sTypoAscender = hhea.ascent   # same as ascent = highest yMax
-    os2.sTypoDescender = hhea.descent
-    os2.sTypoLineGap = hhea.lineGap
-
-    # 5) usWinAscent / winAscent = largest yMax
-    os2.usWinAscent = ymax
-    if hasattr(os2, 'winAscent'):
-        os2.winAscent = ymax
-
-    # 6) usWinDescent / winDescent = lowest yMin * -1 (positive)
-    us_win_descent = (-ymin) if ymin < 0 else ymin
-    os2.usWinDescent = us_win_descent
-    if hasattr(os2, 'winDescent'):
-        os2.winDescent = us_win_descent
+    # 4) FontBBox (head table) = xMin, yMin, xMax, yMax from glyph bounds
+    xmin, ymin, xmax, ymax = get_font_bbox(font)
+    if 'head' in font and all(v is not None for v in (xmin, ymin, xmax, ymax)):
+        head = font['head']
+        head.xMin = xmin
+        head.yMin = ymin
+        head.xMax = xmax
+        head.yMax = ymax
 
     font.flavor = flavor if flavor else None
     font.save(output_path)
     print(f"✓ Fixed vertical metrics: {input_path} → {output_path}")
-    print(f"  - hhea ascent: {hhea.ascent}, descent: {hhea.descent}, lineGap: {hhea.lineGap}")
-    print(f"  - OS/2 typo: ascent={os2.sTypoAscender}, descent={os2.sTypoDescender}, lineGap={os2.sTypoLineGap}")
-    print(f"  - OS/2 win: ascent={os2.usWinAscent}, descent={os2.usWinDescent}")
-    print(f"  - Font bounds: ymax={ymax}, ymin={ymin}")
-    print(f"  - fsSelection 8th bit set: {bool(os2.fsSelection & (1 << 8))}")
+    print(f"  - ascent/sTypoAscender: {new_ascent} (avg rounded)")
+    print(f"  - descent/sTypoDescender: {new_descent} (avg rounded)")
+    print(f"  - FontBBox (head): xMin={xmin}, yMin={ymin}, xMax={xmax}, yMax={ymax}")
+    print(f"  - fsSelection 8th bit set: {bool(os2.fsSelection & (1 << 7))}")
 
 
 def main():

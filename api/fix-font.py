@@ -29,30 +29,31 @@ def _import_fix_function():
     except ImportError:
         # If import fails, define the function inline as fallback
         # This ensures the function works even if the module can't be imported
-        def get_font_ymax_ymin(font):
-            ymax = None
-            ymin = None
+        def get_font_bbox(font):
+            xmin = ymin = xmax = ymax = None
             if 'glyf' in font:
                 for glyph_name in font.getGlyphSet().keys():
                     glyph = font['glyf'][glyph_name]
-                    if glyph and hasattr(glyph, 'yMax') and hasattr(glyph, 'yMin'):
-                        if ymax is None or glyph.yMax > ymax:
-                            ymax = glyph.yMax
+                    if glyph and hasattr(glyph, 'xMin'):
+                        if xmin is None or glyph.xMin < xmin:
+                            xmin = glyph.xMin
+                        if xmax is None or glyph.xMax > xmax:
+                            xmax = glyph.xMax
                         if ymin is None or glyph.yMin < ymin:
                             ymin = glyph.yMin
+                        if ymax is None or glyph.yMax > ymax:
+                            ymax = glyph.yMax
             if 'head' in font:
                 head = font['head']
-                if ymax is None and hasattr(head, 'yMax'):
-                    ymax = head.yMax
+                if xmin is None and hasattr(head, 'xMin'):
+                    xmin = head.xMin
+                if xmax is None and hasattr(head, 'xMax'):
+                    xmax = head.xMax
                 if ymin is None and hasattr(head, 'yMin'):
                     ymin = head.yMin
-            if ymax is None or ymin is None:
-                hhea = font['hhea']
-                if ymax is None:
-                    ymax = hhea.ascent
-                if ymin is None:
-                    ymin = hhea.descent
-            return ymax, ymin
+                if ymax is None and hasattr(head, 'yMax'):
+                    ymax = head.yMax
+            return xmin, ymin, xmax, ymax
 
         def fix_vertical_metrics(input_path, output_path, flavor=None):
             if not os.path.exists(input_path):
@@ -62,20 +63,15 @@ def _import_fix_function():
             if 'OS/2' not in font:
                 raise ValueError("Font does not contain OS/2 table")
             os2 = font['OS/2']
-            ymax, ymin = get_font_ymax_ymin(font)
-            hhea.ascent = ymax
-            hhea.descent = ymin
-            os2.fsSelection |= (1 << 8)  # 8th bit (from left, MSB=1st)
-            os2.sTypoAscender = hhea.ascent
-            os2.sTypoDescender = hhea.descent
-            os2.sTypoLineGap = hhea.lineGap
-            os2.usWinAscent = ymax
-            if hasattr(os2, 'winAscent'):
-                os2.winAscent = ymax
-            us_win_descent = (-ymin) if ymin < 0 else ymin
-            os2.usWinDescent = us_win_descent
-            if hasattr(os2, 'winDescent'):
-                os2.winDescent = us_win_descent
+            os2.fsSelection |= (1 << 7)  # 8th bit = 1
+            new_ascent = round((hhea.ascent + os2.sTypoAscender) / 2)
+            hhea.ascent = os2.sTypoAscender = new_ascent
+            new_descent = round((hhea.descent + os2.sTypoDescender) / 2)
+            hhea.descent = os2.sTypoDescender = new_descent
+            xmin, ymin, xmax, ymax = get_font_bbox(font)
+            if 'head' in font and all(v is not None for v in (xmin, ymin, xmax, ymax)):
+                head = font['head']
+                head.xMin, head.yMin, head.xMax, head.yMax = xmin, ymin, xmax, ymax
             font.flavor = flavor if flavor else None
             font.save(output_path)
 
