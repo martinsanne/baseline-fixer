@@ -65,7 +65,7 @@ def _import_fix_function():
             ymax, ymin = get_font_ymax_ymin(font)
             hhea.ascent = ymax
             hhea.descent = ymin
-            os2.fsSelection |= (1 << 7)
+            os2.fsSelection |= (1 << 8)  # 8th bit (from left, MSB=1st)
             os2.sTypoAscender = hhea.ascent
             os2.sTypoDescender = hhea.descent
             os2.sTypoLineGap = hhea.lineGap

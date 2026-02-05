@@ -57,13 +57,12 @@ def get_font_ymax_ymin(font):
 def fix_vertical_metrics(input_path, output_path, flavor=None):
     """
     Fix vertical metrics per spec:
-    - fsSelection bit 8 (bit 7) = 1 (USE_TYPO_METRICS)
-    - sTypoAscender = hhea ascent
-    - sTypoDescender = hhea descent
+    - fsSelection 8th bit = 1
+    - sTypoAscender and hhea ascent = highest yMax in the font
+    - sTypoDescender and hhea descent = lowest yMin in the font
     - sTypoLineGap = hhea lineGap
-    - usWinAscent / winAscent = largest yMax in font
+    - usWinAscent / winAscent = highest yMax
     - usWinDescent / winDescent = lowest yMin * -1 (positive)
-    - hhea ascent = largest yMax; hhea descent = lowest yMin (so typo matches)
     """
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
@@ -77,16 +76,16 @@ def fix_vertical_metrics(input_path, output_path, flavor=None):
     # 1) Largest yMax and lowest yMin in the font
     ymax, ymin = get_font_ymax_ymin(font)
 
-    # 2) hhea: ascent = largest yMax, descent = lowest yMin (negative), keep lineGap
-    hhea.ascent = ymax
+    # 2) hhea: ascent = highest yMax, descent = lowest yMin (sTypoAscender/sTypoDescender will match)
+    hhea.ascent = ymax   # sTypoAscender and ascent must equal highest yMax
     hhea.descent = ymin  # ymin is typically negative
     # hhea.lineGap unchanged unless we want to force 0
 
-    # 3) fsSelection: eighth bit = 1 (USE_TYPO_METRICS is bit 7 in 0-based indexing)
-    os2.fsSelection |= (1 << 7)
+    # 3) fsSelection: eighth bit = 1 (counting from left, MSB=1st; 8th bit = bit index 8)
+    os2.fsSelection |= (1 << 8)
 
-    # 4) OS/2 typo metrics = hhea (so sTypoAscender = ascent, sTypoDescender = descent, sTypoLineGap = lineGap)
-    os2.sTypoAscender = hhea.ascent
+    # 4) OS/2 typo = hhea (sTypoAscender = ascent = highest yMax; sTypoDescender = descent = lowest yMin)
+    os2.sTypoAscender = hhea.ascent   # same as ascent = highest yMax
     os2.sTypoDescender = hhea.descent
     os2.sTypoLineGap = hhea.lineGap
 
@@ -108,7 +107,7 @@ def fix_vertical_metrics(input_path, output_path, flavor=None):
     print(f"  - OS/2 typo: ascent={os2.sTypoAscender}, descent={os2.sTypoDescender}, lineGap={os2.sTypoLineGap}")
     print(f"  - OS/2 win: ascent={os2.usWinAscent}, descent={os2.usWinDescent}")
     print(f"  - Font bounds: ymax={ymax}, ymin={ymin}")
-    print(f"  - USE_TYPO_METRICS bit set: {bool(os2.fsSelection & (1 << 7))}")
+    print(f"  - fsSelection 8th bit set: {bool(os2.fsSelection & (1 << 8))}")
 
 
 def main():
