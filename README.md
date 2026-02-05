@@ -108,6 +108,7 @@ python3 fix_vertical_metrics.py input.ttf output.woff2 --flavor woff2
 4. Deploy! 🚀
 
 The app includes:
+
 - ✅ Next.js frontend (served from Vercel CDN)
 - ✅ Python serverless function at `/api/fix-font.py` (runs on Vercel's Python runtime)
 - ✅ Both on the same domain (no CORS issues!)
@@ -141,6 +142,18 @@ Then visit http://localhost:3000
 - Python 3.7+ (for font processing)
 - fonttools (Python package)
 - brotli (Python package)
+
+## Notes
+
+The instructions in [Max Kohler's guide](https://www.maxkohler.com/posts/2022-02-19-fixing-vertical-metrics/) for changing values in the .ttx file does not always work. Here's an updated version:
+
+- the eight number of the <fsSelection /> value must be set to 1
+- The value prop in <sTypoAscender /> must be equal to the value in <ascent> inside <hhea> (<hhea><ascent /></hhea>)
+- The value prop in <sTypoDescender /> must be equal to the value in <descent> inside <hhea> (<hhea><descent /></hhea>)
+- The value prop in <sTypoLinegap /> must be equal to the value in <lineGap> inside <hhea> (<hhea><lineGap /></hhea>)
+- The value prop in <usWinAscent> and/or <winAscent> (if exists) must be equal to the largest <ymax/> value in the font (normally defined in <head><ymax /></head>)
+- The value prop in <usWinDescent> and/or <winDescent> must be equal to the lowest <yMin /> in the font multiplied by -1 (eg <yMin value=“-200”/>, <usWinDescent value="200"/>
+- The value prop in <sTypoAscender /> and <ascent /> (<hhea><ascent /></hhea>) must be equal to the lowest <yMin />
 
 ## License
 
