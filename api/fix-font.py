@@ -8,17 +8,92 @@ import os
 import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler
+from fontTools.ttLib import TTFont
 
-# Add project root to path to import our module
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
+# Import the fix function - try multiple paths for Vercel compatibility
+def _import_fix_function():
+    """Import fix_vertical_metrics function with fallback paths."""
+    # Try importing from project root (for Vercel)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    
+    # Also try current directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    
+    try:
+        from fix_vertical_metrics import fix_vertical_metrics
+        return fix_vertical_metrics
+    except ImportError:
+        # If import fails, define the function inline as fallback
+        # This ensures the function works even if the module can't be imported
+        def find_ymax_ymin(font):
+            """Find the largest ymax and lowest ymin values in the font."""
+            ymax = None
+            ymin = None
+            
+            for glyph_name in font.getGlyphSet().keys():
+                glyph = font['glyf'][glyph_name] if 'glyf' in font else None
+                if glyph and hasattr(glyph, 'yMax') and hasattr(glyph, 'yMin'):
+                    if ymax is None or glyph.yMax > ymax:
+                        ymax = glyph.yMax
+                    if ymin is None or glyph.yMin < ymin:
+                        ymin = glyph.yMin
+            
+            # Fallback to hhea values if no glyphs found
+            if ymax is None:
+                hhea = font['hhea']
+                ymax = hhea.ascent
+            if ymin is None:
+                hhea = font['hhea']
+                ymin = hhea.descent
+            
+            return ymax, ymin
+        
+        def fix_vertical_metrics(input_path, output_path, flavor=None):
+            """Fix vertical metrics in a font file."""
+            if not os.path.exists(input_path):
+                raise FileNotFoundError(f"Input file not found: {input_path}")
+            
+            # Load the font
+            font = TTFont(input_path)
+            
+            # Get hhea table values
+            hhea = font['hhea']
+            hhea_ascent = hhea.ascent
+            hhea_descent = hhea.descent
+            hhea_linegap = hhea.lineGap
+            
+            # Get OS/2 table
+            if 'OS/2' not in font:
+                raise ValueError("Font does not contain OS/2 table")
+            
+            os2 = font['OS/2']
+            
+            # Set fsSelect bit 7 to 1 (USE_TYPO_METRICS)
+            os2.fsSelection |= (1 << 7)  # Set bit 7
+            
+            # Sync OS/2 typo metrics with hhea metrics
+            os2.sTypoAscender = hhea_ascent
+            os2.sTypoDescender = hhea_descent
+            os2.sTypoLineGap = hhea_linegap
+            
+            # Find ymax and ymin from glyphs
+            ymax, ymin = find_ymax_ymin(font)
+            
+            # Set OS/2 win metrics to match actual glyph bounds
+            os2.usWinAscent = ymax
+            os2.usWinDescent = abs(ymin) if ymin < 0 else ymin
+            
+            # Save the font
+            font.save(output_path, flavor=flavor)
+        
+        return fix_vertical_metrics
 
-try:
-    from fix_vertical_metrics import fix_vertical_metrics
-except ImportError:
-    # If import fails, try adding current directory
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from fix_vertical_metrics import fix_vertical_metrics
+# Import the fix function
+fix_vertical_metrics = _import_fix_function()
 
 
 def parse_multipart(body, boundary):
