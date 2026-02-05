@@ -91,6 +91,20 @@ python3 fix_vertical_metrics.py input.ttf output.woff --flavor woff
 python3 fix_vertical_metrics.py input.ttf output.woff2 --flavor woff2
 ```
 
+### Test fonts: TTX → WOFF2 on save
+
+The `test-fonts/` directory can be used with a watcher that compiles `.ttx` files to `.woff2` whenever you save:
+
+```bash
+# Install dependencies (includes watchdog)
+pip install -r requirements.txt
+
+# Start the watcher (from project root)
+python scripts/ttx-to-woff2-watch.py
+```
+
+Put `.ttx` files in `test-fonts/`; saving a file will run `ttx -f --flavor woff2` and produce the corresponding `.woff2` in the same folder. See [test-fonts/README.md](./test-fonts/README.md) for details.
+
 ## Deployment
 
 ### Vercel (Recommended - All-in-One)
