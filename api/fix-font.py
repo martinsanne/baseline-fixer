@@ -87,8 +87,9 @@ def _import_fix_function():
             os2.usWinAscent = ymax
             os2.usWinDescent = abs(ymin) if ymin < 0 else ymin
             
-            # Save the font
-            font.save(output_path, flavor=flavor)
+            # Save the font (set flavor on the font object; save() does not accept flavor=)
+            font.flavor = flavor if flavor else None
+            font.save(output_path)
         
         return fix_vertical_metrics
 

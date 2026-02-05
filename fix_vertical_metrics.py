@@ -83,8 +83,9 @@ def fix_vertical_metrics(input_path, output_path, flavor=None):
     os2.usWinAscent = ymax
     os2.usWinDescent = abs(ymin) if ymin < 0 else ymin
     
-    # Save the font
-    font.save(output_path, flavor=flavor)
+    # Save the font (set flavor on the font object; save() does not accept flavor=)
+    font.flavor = flavor if flavor else None
+    font.save(output_path)
     print(f"✓ Fixed vertical metrics: {input_path} → {output_path}")
     print(f"  - hhea ascent: {hhea_ascent}, descent: {hhea_descent}, lineGap: {hhea_linegap}")
     print(f"  - OS/2 typo: ascent={os2.sTypoAscender}, descent={os2.sTypoDescender}, lineGap={os2.sTypoLineGap}")
