@@ -1,49 +1,25 @@
-import localFont from 'next/font/local';
+// Manual test page. The fonts come from the git-ignored test-fonts/ directory through
+// ./fonts/[name]/route.ts, so the page builds even when they're missing.
+const fontFaces = `
+@font-face { font-family: 'Original'; src: url('/renderer/fonts/original.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Fixed'; src: url('/renderer/fonts/fixed.woff2') format('woff2'); font-display: swap; }
+`;
 
-const originalFont = localFont({
-  variable: '--original',
-  fallback: ['sans-serif'],
-  display: 'swap',
-  preload: true,
-  src: [
-    {
-      path: '../../test-fonts/original.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-  ],
-});
-
-
-const fixedFont = localFont({
-  variable: '--fixed',
-  fallback: ['sans-serif'],
-  display: 'swap',
-  preload: true,
-  src: [
-    {
-      path: '../../test-fonts/fixed.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-  ],
-});
-
-const Button = ({ children, className }: { children: React.ReactNode, className: string }) => {
+const Button = ({ children, fontFamily }: { children: React.ReactNode, fontFamily: string }) => {
   return (
-    <button className={`px-4 py-2 font-lg bg-[red] rounded-full ${className}`}>
+    <button className="px-4 py-2 font-lg bg-[red] rounded-full" style={{ fontFamily }}>
       {children}
     </button>
   );
 };
 
-export default async function RenderPage() {
-
+export default function RenderPage() {
   return (
-    <main className={`${originalFont.variable} ${fixedFont.variable}`}>
+    <main>
+      <style dangerouslySetInnerHTML={{ __html: fontFaces }} />
       <div className="flex justify-center items-center h-screen space-x-4">
-      <Button className={`${originalFont.className}`}>(original) LOREM IPSUM</Button>
-      <Button className={`${fixedFont.className}`}>LOREM IPSUM (fixed)</Button>
+        <Button fontFamily="'Original', sans-serif">(original) LOREM IPSUM</Button>
+        <Button fontFamily="'Fixed', sans-serif">LOREM IPSUM (fixed)</Button>
       </div>
     </main>
   );
