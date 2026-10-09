@@ -12,11 +12,12 @@ interface DownloadControlsProps {
   size?: 'sm' | 'md';
   allowAll?: boolean;
   className?: string;
+  tone?: 'default' | 'inverted';
 }
 
 const MORE_FORMATS: OutputFormat[] = ['woff', 'ttf'];
 
-export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allowAll, className }: DownloadControlsProps) {
+export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allowAll, className, tone = 'default' }: DownloadControlsProps) {
   const base = cn(
     'inline-flex items-center gap-1.5 rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     size === 'sm' ? 'h-8 px-3.5 text-[13px]' : 'h-10 px-5 text-sm',
@@ -29,19 +30,24 @@ export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allo
         type="button"
         disabled={disabled || !!busy}
         onClick={() => onDownload('woff2')}
-        className={cn(base, 'bg-ink text-ivory hover:bg-ink-700')}
+        className={cn(base, tone === 'inverted' ? 'bg-white text-ink hover:bg-ivory' : 'bg-ink text-ivory hover:bg-ink-700')}
       >
         {isBusy('woff2') ? <Spinner /> : <DownloadIcon />}
-        Web <span className="text-ivory/60">.woff2</span>
+        Web <span className={tone === 'inverted' ? 'text-ink-400' : 'text-ivory/60'}>.woff2</span>
       </button>
       <button
         type="button"
         disabled={disabled || !!busy}
         onClick={() => onDownload('otf')}
-        className={cn(base, 'border border-ink-200 bg-white text-ink hover:border-ink-400')}
+        className={cn(
+          base,
+          tone === 'inverted'
+            ? 'border border-white/40 text-white hover:border-white hover:bg-white/10'
+            : 'border border-ink-200 bg-white text-ink hover:border-ink-400',
+        )}
       >
         {isBusy('otf') ? <Spinner /> : <DownloadIcon />}
-        Desktop <span className="text-ink-400">.otf</span>
+        Desktop <span className={tone === 'inverted' ? 'text-white/60' : 'text-ink-400'}>.otf</span>
       </button>
       <label className="relative">
         <span className="sr-only">More formats</span>
@@ -54,7 +60,10 @@ export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allo
           }}
           className={cn(
             base,
-            'w-[8.5rem] cursor-pointer appearance-none border border-transparent bg-transparent pr-7 text-ink-500 hover:border-ink-200 hover:text-ink',
+            'w-[8.5rem] cursor-pointer appearance-none border border-transparent bg-transparent pr-7',
+            tone === 'inverted'
+              ? 'text-white/80 hover:border-white/40 hover:text-white [&>option]:text-ink'
+              : 'text-ink-500 hover:border-ink-200 hover:text-ink',
           )}
         >
           <option value="">{busy && !['woff2', 'otf'].includes(busy) ? 'Preparing…' : 'More formats'}</option>
@@ -66,7 +75,7 @@ export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allo
           {allowAll && <option value="all">All four formats</option>}
         </select>
         <svg
-          className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-ink-400"
+          className={cn('pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2', tone === 'inverted' ? 'text-white/70' : 'text-ink-400')}
           viewBox="0 0 12 12"
           fill="none"
           aria-hidden

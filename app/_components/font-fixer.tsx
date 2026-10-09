@@ -19,10 +19,11 @@ import {
   type OutputFormat,
 } from '@/lib/font-types';
 import { createZip, type ZipEntry } from '@/lib/zip';
-import { AlignmentReport } from './alignment-report';
-import { DownloadControls, type DownloadChoice } from './download-controls';
+import { BatchStatus } from './batch-status';
+import { type DownloadChoice } from './download-controls';
 import { DropZone } from './drop-zone';
-import { FileList, ProgressBar } from './file-list';
+import { FileList } from './file-list';
+import { ReportDrawer } from './report-drawer';
 
 export interface Job {
   id: string;
@@ -44,6 +45,7 @@ export function FontFixer() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [align, setAlign] = useState<AlignTarget>('cap');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [batchBusy, setBatchBusy] = useState<DownloadChoice | undefined>();
   const jobsRef = useRef(jobs);
@@ -78,7 +80,6 @@ export function FontFixer() {
           else patchJob(id, run, { progress: 0.02 + fraction * 0.48 });
         });
         patchJob(id, run, { status: 'done', progress: 1, result });
-        setSelectedId((current) => current ?? id);
       } catch (error) {
         patchJob(id, run, { status: 'error', progress: 1, error: error instanceof Error ? error.message : String(error) });
       } finally {
@@ -127,9 +128,11 @@ export function FontFixer() {
     requeue(() => true);
   };
 
-  const removeJob = (id: string) => {
-    setJobs((prev) => prev.filter((job) => job.id !== id));
-    setSelectedId((current) => (current === id ? null : current));
+  const removeJob = (id: string) => setJobs((prev) => prev.filter((job) => job.id !== id));
+
+  const openReport = (id: string) => {
+    setSelectedId(id);
+    setReportOpen(true);
   };
 
   /** Returns a format for a finished job, converting on the server if it was not generated yet. */
@@ -185,13 +188,18 @@ export function FontFixer() {
     }
   };
 
-  const doneCount = jobs.filter((job) => job.status === 'done').length;
-  const finished = jobs.filter((job) => job.status === 'done' || job.status === 'error').length;
+  const readyJobs = jobs.filter((job): job is Job & { result: FixResult } => job.status === 'done' && !!job.result);
+  const failedCount = jobs.filter((job) => job.status === 'error').length;
   const totalProgress = jobs.length ? jobs.reduce((sum, job) => sum + job.progress, 0) / jobs.length : 0;
-  const selected = jobs.find((job) => job.id === selectedId && job.status === 'done');
+  const selected = readyJobs.find((job) => job.id === selectedId);
+
+  // Close the report if its font was removed or is being reprocessed.
+  useEffect(() => {
+    if (reportOpen && !selected) setReportOpen(false);
+  }, [reportOpen, selected]);
 
   return (
-    <div className="space-y-16">
+    <>
       <section
         id="tool"
         className="rounded-[28px] border border-ivory-300 bg-white/70 p-3 shadow-[0_1px_0_rgba(20,20,19,0.04),0_24px_48px_-24px_rgba(20,20,19,0.12)] sm:p-4"
@@ -204,27 +212,18 @@ export function FontFixer() {
         <DropZone onFiles={addFiles} compact={jobs.length > 0}>
           {jobs.length > 0 && (
             <div className="mt-3 space-y-3">
-              <div className="rounded-2xl bg-ivory-100 px-4 py-3.5 sm:px-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-ink-700">
-                    <span className="font-medium text-ink">
-                      {finished === jobs.length ? `${doneCount} of ${jobs.length} fonts ready` : `Processing fonts · ${finished} of ${jobs.length} done`}
-                    </span>
-                    <span className="ml-2 font-mono text-[12px] text-ink-400">{Math.round(totalProgress * 100)}%</span>
-                  </p>
-                  {doneCount > 1 && (
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                      <span className="whitespace-nowrap text-[13px] text-ink-500">All as .zip</span>
-                      <DownloadControls onDownload={downloadAll} busy={batchBusy} allowAll />
-                    </div>
-                  )}
-                </div>
-                <ProgressBar value={totalProgress} tone={finished === jobs.length ? 'done' : 'active'} className="mt-3" />
-              </div>
+              <BatchStatus
+                total={jobs.length}
+                done={readyJobs.length}
+                failed={failedCount}
+                progress={totalProgress}
+                busy={batchBusy}
+                onDownloadAll={downloadAll}
+              />
               <FileList
                 jobs={jobs}
-                selectedId={selected?.id ?? null}
-                onSelect={setSelectedId}
+                selectedId={reportOpen ? selected?.id ?? null : null}
+                onSelect={openReport}
                 onRemove={removeJob}
                 onRetry={(id) => requeue((job) => job.id === id)}
                 onDownload={downloadOne}
@@ -243,10 +242,15 @@ export function FontFixer() {
         )}
       </section>
 
-      {selected?.result && (
-        <AlignmentReport key={`${selected.id}:${selected.run}`} job={selected as Job & { result: FixResult }} />
-      )}
-    </div>
+      <ReportDrawer
+        open={reportOpen}
+        job={selected}
+        readyJobs={readyJobs}
+        onNavigate={setSelectedId}
+        onClose={() => setReportOpen(false)}
+        onDownload={downloadOne}
+      />
+    </>
   );
 }
 

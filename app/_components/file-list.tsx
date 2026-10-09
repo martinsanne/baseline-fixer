@@ -49,14 +49,14 @@ function FileRow({ job, selected, onSelect, onRemove, onRetry, onDownload }: Fil
   const done = job.status === 'done';
 
   return (
-    <li className={cn('relative transition-colors', selected && done ? 'bg-ivory-100' : '')}>
+    <li className={cn('relative transition-colors', done && 'hover:bg-ivory-100', selected && done && 'bg-ivory-100')}>
       {selected && done && <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-clay" aria-hidden />}
       <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
         <button
           type="button"
           onClick={onSelect}
           disabled={!done}
-          aria-pressed={selected}
+          aria-haspopup="dialog"
           className="group min-w-0 flex-1 text-left disabled:cursor-default"
         >
           <span className="flex items-baseline gap-2">
@@ -69,9 +69,10 @@ function FileRow({ job, selected, onSelect, onRemove, onRetry, onDownload }: Fil
             {names && <span className="text-ink-400">{job.file.name} · </span>}
             <StatusText job={job} />
           </span>
-          {done && !selected && (
-            <span className="mt-1 hidden text-[12px] text-clay-dark opacity-0 sm:block transition-opacity group-hover:opacity-100">
-              Show alignment report →
+          {done && (
+            <span className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-clay-dark">
+              View alignment report
+              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
             </span>
           )}
         </button>

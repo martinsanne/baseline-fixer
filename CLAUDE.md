@@ -37,6 +37,8 @@ The project uses npm (`package-lock.json`), not pnpm.
   - It queues jobs with concurrency 3 and tracks upload progress over XHR. Each job has a `run` counter so stale responses are ignored after a re-queue, for example when the align target changes.
   - It requests `woff2,otf` up front and fetches other formats on demand through `ensureOutput`.
   - It builds zips client-side with `lib/zip.ts`, a STORE-only writer, to avoid a dependency.
+  - `batch-status.tsx` shows the total-progress bar while working and a solid olive "done" state when finished.
+  - Clicking a finished font opens `report-drawer.tsx`, which shows `alignment-report.tsx` in a right-hand drawer with previous/next navigation and arrow keys. `drawer.tsx` is built on the native `<dialog>` with `showModal()` and needs no UI library. Its `data-state` attribute drives the slide animation.
 - **Alignment math lives in `lib/alignment.ts`**: `offsetUnits = (ascent + descent − targetHeight) / 2`, where descent is negative and a positive result means the text sits low.
   - `alignment-cell.tsx` draws each simulated button as SVG, with the baseline computed from the same math. The preview is exact in any browser and does not depend on the viewer's OS.
   - Keep the TS math and the Python `_print_report` consistent.

@@ -114,7 +114,7 @@ function Summary({ result }: { result: FixResult }) {
     <section className="space-y-8">
       <div>
         <p className="font-mono text-[11px] uppercase tracking-wider text-ink-400">
-          {before.names.family} {before.names.style} · {before.outline}
+          {before.outline}
           {before.variable ? ' · variable' : ''} · {before.unitsPerEm} units/em
         </p>
         <h2 className="mt-3 max-w-3xl font-serif text-[28px] leading-snug tracking-tight sm:text-[32px]">{headline}</h2>
