@@ -1,298 +1,195 @@
-'use client';
-
-import { useState, useCallback } from 'react';
+import { AlignmentCell } from './_components/alignment-cell';
+import { FontFixer } from './_components/font-fixer';
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
-  const [format, setFormat] = useState<'ttf' | 'woff' | 'woff2'>('ttf');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  return (
+    <div className="min-h-screen">
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
+        <a href="#" className="flex items-center gap-2.5 text-[15px] font-medium tracking-tight">
+          <LogoMark />
+          Vertical Metrics
+        </a>
+        <nav className="flex items-center gap-6 text-sm text-ink-500">
+          <a href="#why" className="hover:text-ink">Why</a>
+          <a href="#how" className="hover:text-ink">How it works</a>
+          <a href="#cli" className="hidden hover:text-ink sm:inline">CLI</a>
+        </nav>
+      </header>
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
+      <main className="mx-auto max-w-6xl px-5 sm:px-8">
+        <section className="max-w-3xl pb-10 pt-10 sm:pb-12 sm:pt-16">
+          <h1 className="font-serif text-[44px] leading-[1.05] tracking-tightest sm:text-[64px]">
+            Text that sits in the middle. On every system.
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">
+            Most fonts look slightly too high or too low inside buttons, and by a different amount on macOS, Windows and
+            Android. Drop in your fonts to see the offset on each system, then download versions that center
+            everywhere.
+          </p>
+        </section>
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
+        <FontFixer />
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+        <Why />
+        <How />
+        <Cli />
+      </main>
 
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      const fileName = droppedFile.name.toLowerCase();
-      const validExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
-      const isValid = validExtensions.some(ext => fileName.endsWith(ext));
-      
-      if (isValid) {
-        setFile(droppedFile);
-        setError(null);
-      } else {
-        setError('Please upload a valid font file (.ttf, .otf, .woff, or .woff2)');
-      }
-    }
-  }, []);
+      <footer className="mx-auto mt-24 max-w-6xl border-t border-ivory-300 px-5 py-10 text-sm text-ink-400 sm:px-8">
+        Built on{' '}
+        <a href="https://github.com/fonttools/fonttools" className="underline decoration-ink-200 underline-offset-4 hover:text-ink">
+          fontTools
+        </a>
+        . Background reading:{' '}
+        <a
+          href="https://www.maxkohler.com/posts/2022-02-19-fixing-vertical-metrics/"
+          className="underline decoration-ink-200 underline-offset-4 hover:text-ink"
+        >
+          Max Kohler on fixing vertical metrics
+        </a>
+        .
+      </footer>
+    </div>
+  );
+}
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setError(null);
-    }
-  }, []);
+// Illustrative metrics (1000 units/em, cap height 700), exaggerated so the offset is visible.
+const EXAMPLE = {
+  mac: { source: 'hhea' as const, ascent: 1100, descent: -200, lineGap: 0 },
+  windows: { source: 'win' as const, ascent: 1000, descent: -420, lineGap: 0 },
+  fixed: { source: 'typo' as const, ascent: 1000, descent: -300, lineGap: 0 },
+};
 
-  const handleProcess = useCallback(async () => {
-    if (!file) return;
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('format', format);
-
-      // Try Python API first (for Vercel), fallback to Node.js API (for local dev)
-      let apiEndpoint = '/api/fix-font';
-      
-      // In production/Vercel, use the Python serverless function
-      // In local dev, the Node.js route will handle it
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process font');
-      }
-
-      // Get the filename from Content-Disposition header or generate one
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = file.name.replace(/\.[^/.]+$/, '') + `-fixed.${format}`;
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      // Download the file
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err: any) {
-      setError(err.message || 'Failed to process font file');
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [file, format]);
+function Why() {
+  const cells = [
+    { label: 'macOS reads hhea', note: 'Large ascender pushes the baseline down', metrics: EXAMPLE.mac, tone: 'before' as const },
+    { label: 'Windows reads usWin', note: 'Deep descender pulls the text up', metrics: EXAMPLE.windows, tone: 'before' as const },
+    { label: 'Refined: one set, balanced', note: 'Same result on every system', metrics: EXAMPLE.fixed, tone: 'after' as const },
+  ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Vertical Metrics Fixer
-          </h1>
-          <p className="text-gray-600 mb-8">
-            Fix inconsistent vertical metrics in your font files. Based on{' '}
-            <a 
-              href="https://www.maxkohler.com/posts/2022-02-19-fixing-vertical-metrics/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              Max Kohler&apos;s guide
-            </a>
-            .
-          </p>
-
-          {/* Drag and Drop Area */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`
-              border-2 border-dashed rounded-xl p-12 text-center transition-colors
-              ${isDragging 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-300 hover:border-gray-400'
-              }
-              ${file ? 'bg-green-50 border-green-400' : ''}
-            `}
-          >
-            {file ? (
-              <div className="space-y-4">
-                <div className="text-green-600">
-                  <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-lg font-semibold">{file.name}</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    {(file.size / 1024).toFixed(2)} KB
-                  </p>
-                </div>
-                <button
-                  onClick={() => setFile(null)}
-                  className="text-sm text-gray-500 hover:text-gray-700 underline"
-                >
-                  Remove file
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <div>
-                  <p className="text-lg font-semibold text-gray-700">
-                    Drag and drop your font file here
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    or click to browse
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  accept=".ttf,.otf,.woff,.woff2"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="file-input"
-                />
-                <label
-                  htmlFor="file-input"
-                  className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors"
-                >
-                  Select Font File
-                </label>
-              </div>
-            )}
-          </div>
-
-          {/* Format Selection */}
-          {file && (
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Output Format
-              </label>
-              <div className="flex gap-4">
-                {(['ttf', 'woff', 'woff2'] as const).map((fmt) => (
-                  <label key={fmt} className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="format"
-                      value={fmt}
-                      checked={format === fmt}
-                      onChange={(e) => setFormat(e.target.value as typeof format)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm font-medium text-gray-700 uppercase">
-                      {fmt}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          {/* Process Button */}
-          {file && (
-            <button
-              onClick={handleProcess}
-              disabled={isProcessing}
-              className={`
-                mt-6 w-full py-4 px-6 rounded-lg font-semibold text-white transition-colors
-                ${isProcessing
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-                }
-              `}
-            >
-              {isProcessing ? 'Processing...' : 'Fix Vertical Metrics'}
-            </button>
-          )}
-
-          {/* Info Section */}
-          <div className="mt-8 pt-8 border-t border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              What this tool does:
-            </h2>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">✓</span>
-                Sets <code className="bg-gray-100 px-1 rounded">USE_TYPO_METRICS</code> flag
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">✓</span>
-                Syncs OS/2 typo metrics with hhea metrics
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">✓</span>
-                Sets OS/2 win metrics to match actual glyph bounds
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">✓</span>
-                Ensures consistent rendering across platforms
-              </li>
-            </ul>
-          </div>
-
-          {/* CLI Usage */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Command Line Usage:
-            </h2>
-            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
-              <div className="mb-2">
-                <span className="text-gray-500"># Install dependencies</span>
-              </div>
-              <div className="mb-4">
-                <span className="text-green-400">pip install -r requirements.txt</span>
-              </div>
-              <div className="mb-2">
-                <span className="text-gray-500"># Fix font (outputs TTF)</span>
-              </div>
-              <div className="mb-4">
-                <span className="text-green-400">python3 fix_vertical_metrics.py input.ttf output.ttf</span>
-              </div>
-              <div className="mb-2">
-                <span className="text-gray-500"># Output as WOFF</span>
-              </div>
-              <div className="mb-4">
-                <span className="text-green-400">python3 fix_vertical_metrics.py input.ttf output.woff --flavor woff</span>
-              </div>
-              <div className="mb-2">
-                <span className="text-gray-500"># Output as WOFF2</span>
-              </div>
-              <div>
-                <span className="text-green-400">python3 fix_vertical_metrics.py input.ttf output.woff2 --flavor woff2</span>
-              </div>
-            </div>
+    <section id="why" className="scroll-mt-8 border-t border-ivory-300 pt-20 mt-24">
+      <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-wider text-clay-dark">Why this exists</p>
+          <h2 className="mt-4 font-serif text-4xl leading-tight tracking-tight">
+            Fonts tell each operating system a different story about their height.
+          </h2>
+          <div className="mt-6 space-y-4 text-[17px] leading-relaxed text-ink-700">
+            <p>
+              Browsers do not center glyphs. They center the font&apos;s <em>content area</em>: the space between its
+              declared ascender and descender. Text looks centered only when the space above the capitals matches the
+              space below the baseline.
+            </p>
+            <p>
+              A font stores those values three times, in the hhea, OS/2 typo and OS/2 win tables. macOS reads one
+              set, Windows another, and Android and Linux a third, depending on a single flag. When the sets disagree,
+              the same button label lands in a different spot on each system. Padding tweaks fixed for one system break
+              another.
+            </p>
+            <p>
+              This tool rewrites the metrics once, in the font file, so CSS centering just works.
+            </p>
           </div>
         </div>
+        <div className="space-y-3">
+          {cells.map((cell) => (
+            <figure
+              key={cell.label}
+              className="grid grid-cols-[1fr_1.3fr] items-center gap-4 rounded-2xl border border-ivory-300 bg-white p-3 pl-5"
+            >
+              <figcaption>
+                <p className="text-sm font-medium text-ink">{cell.label}</p>
+                <p className="mt-1 text-[13px] text-ink-500">{cell.note}</p>
+              </figcaption>
+              <AlignmentCell
+                metrics={cell.metrics}
+                unitsPerEm={1000}
+                targetHeight={700}
+                fontFamily="Georgia, 'Times New Roman', serif"
+                text="Button"
+                tone={cell.tone}
+              />
+            </figure>
+          ))}
+        </div>
       </div>
-    </main>
+    </section>
+  );
+}
+
+function How() {
+  const steps = [
+    {
+      title: 'Measure',
+      body: 'Reads the real cap height and x-height from the H and x outlines, and the tallest and deepest glyphs.',
+    },
+    {
+      title: 'Balance',
+      body: 'Splits the current macOS line height so the space above the capitals equals the space below the baseline.',
+    },
+    {
+      title: 'Unify',
+      body: 'Writes identical values to hhea and OS/2 typo, sets line gaps to zero and turns on USE_TYPO_METRICS.',
+    },
+    {
+      title: 'Protect',
+      body: 'Sets the Windows win metrics to cover every glyph, so accents and descenders never clip in desktop apps.',
+    },
+  ];
+  return (
+    <section id="how" className="scroll-mt-8 pt-24">
+      <p className="font-mono text-[11px] uppercase tracking-wider text-clay-dark">How it works</p>
+      <h2 className="mt-4 max-w-2xl font-serif text-4xl leading-tight tracking-tight">Four changes to the font, nothing else.</h2>
+      <ol className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, index) => (
+          <li key={step.title} className="rounded-2xl border border-ivory-300 bg-white p-6">
+            <span className="font-mono text-xs text-ink-400">0{index + 1}</span>
+            <h3 className="mt-6 font-serif text-xl">{step.title}</h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-500">{step.body}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-6 max-w-3xl text-[15px] leading-relaxed text-ink-500">
+        Glyph shapes, spacing, kerning and features stay untouched, and line-height: normal on macOS stays the same.
+        The desktop .otf holds CFF outlines. TrueType sources are converted losslessly, which drops TrueType hinting.
+      </p>
+    </section>
+  );
+}
+
+function Cli() {
+  return (
+    <section id="cli" className="scroll-mt-8 pt-24">
+      <div className="grid gap-8 rounded-[28px] bg-ink p-8 text-ivory sm:p-12 lg:grid-cols-[1fr_1.4fr]">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-wider text-clay">Command line</p>
+          <h2 className="mt-4 font-serif text-3xl leading-tight tracking-tight">Same fix, in your build pipeline.</h2>
+          <p className="mt-4 text-[15px] leading-relaxed text-ivory/60">
+            The output format follows the file extension. Add --report to print the offset on each system.
+          </p>
+        </div>
+        <pre className="overflow-x-auto rounded-2xl bg-white/5 p-6 font-mono text-[13px] leading-7 text-ivory/90">
+          <code>
+            <span className="text-ivory/40"># install</span>
+            {'\n'}pip install -r requirements.txt{'\n\n'}
+            <span className="text-ivory/40"># fix and export</span>
+            {'\n'}python fix_vertical_metrics.py in.ttf out.woff2
+            {'\n'}python fix_vertical_metrics.py in.ttf out.otf --align x{'\n\n'}
+            <span className="text-ivory/40"># analyze only</span>
+            {'\n'}python fix_vertical_metrics.py in.ttf --report
+          </code>
+        </pre>
+      </div>
+    </section>
+  );
+}
+
+function LogoMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden>
+      <rect x="1" y="5" width="22" height="14" rx="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="0" x2="24" y1="12" y2="12" stroke="#d97757" strokeWidth="1.5" strokeDasharray="2 2" />
+    </svg>
   );
 }

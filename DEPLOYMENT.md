@@ -92,11 +92,10 @@ If you prefer to separate frontend and backend:
 Create `server.py`:
 
 ```python
-from flask import Flask, request, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import tempfile
 import os
-from fix_vertical_metrics import fix_vertical_metrics
+from fix_vertical_metrics import parse_formats, process
 
 app = Flask(__name__)
 CORS(app)
@@ -105,33 +104,14 @@ CORS(app)
 def fix_font():
     if 'file' not in request.files:
         return {'error': 'No file provided'}, 400
-    
-    file = request.files['file']
-    output_format = request.form.get('format', 'ttf')
-    
-    with tempfile.TemporaryDirectory() as temp_dir:
-        input_path = os.path.join(temp_dir, file.filename)
-        file.save(input_path)
-        
-        base_name = os.path.splitext(file.filename)[0]
-        if output_format == 'woff':
-            output_path = os.path.join(temp_dir, f'{base_name}-fixed.woff')
-            flavor = 'woff'
-        elif output_format == 'woff2':
-            output_path = os.path.join(temp_dir, f'{base_name}-fixed.woff2')
-            flavor = 'woff2'
-        else:
-            output_path = os.path.join(temp_dir, f'{base_name}-fixed.ttf')
-            flavor = None
-        
-        fix_vertical_metrics(input_path, output_path, flavor)
-        
-        return send_file(
-            output_path,
-            mimetype=f'font/{output_format}',
-            as_attachment=True,
-            download_name=f'{base_name}-fixed.{output_format}'
-        )
+    upload = request.files['file']
+    result = process(
+        upload.read(),
+        upload.filename,
+        request.form.get('align', 'cap'),
+        parse_formats(request.form.get('formats', 'woff2')),
+    )
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
@@ -192,8 +172,9 @@ After deployment, test the API:
 ```bash
 curl -X POST https://your-domain.com/api/fix-font \
   -F "file=@test-font.ttf" \
-  -F "format=ttf" \
-  --output fixed-font.ttf
+  -F "formats=woff2,otf" \
+  -F "align=cap"
+# Responds with JSON: per-platform analysis before/after plus base64 outputs
 ```
 
 ## Troubleshooting

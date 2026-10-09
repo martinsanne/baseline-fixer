@@ -46,3 +46,6 @@ ENV/
 *.otf
 *.ttx
 !test-fonts/
+
+# typescript
+*.tsbuildinfo

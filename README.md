@@ -1,170 +1,81 @@
-# Vertical Metrics Fixer
+# Vertical Metrics
 
-A web application and CLI tool to fix inconsistent vertical metrics in font files. Based on [Max Kohler's guide](https://www.maxkohler.com/posts/2022-02-19-fixing-vertical-metrics/).
+Fonts often sit too high or too low inside buttons, and by a different amount on macOS, Windows and Android. This web app and CLI rewrite a font's vertical metrics so text is optically centered in its line box on every system and in every browser engine.
 
-## Features
+## Why text misaligns
 
-- 🎨 Beautiful drag-and-drop web interface
-- 💻 Command-line tool for batch processing
-- 🔧 Fixes vertical metrics inconsistencies across platforms
-- 📦 Supports TTF, WOFF, and WOFF2 formats
+A font stores its ascender and descender three times. Each platform reads a different set:
 
-## What it does
+| Table | Read by |
+| --- | --- |
+| `hhea` ascender / descender / lineGap | macOS and iOS (Core Text): Safari, Chrome |
+| `OS/2` sTypo* | Windows (DirectWrite) and Linux/Android (FreeType), only when `USE_TYPO_METRICS` (fsSelection bit 7) is set and OS/2 is version 4+ |
+| `OS/2` usWinAscent / usWinDescent | Windows when the flag is off. Also the clipping box in GDI desktop apps |
 
-This tool fixes vertical metrics in font files by:
+CSS centers the *content area* (ascent + descent) in the line box, not the glyphs. Capitals look centered only when `ascent − |descent| = capHeight`. For any metric set the offset is `(ascent − |descent| − capHeight) / 2` font units. A positive value means the text sits low. It does not depend on `line-height`.
 
-1. Setting the 8th bit of fsSelection to 1
-2. Setting ascent and sTypoAscender to the average of their current values (rounded)
-3. Setting descent and sTypoDescender to the average of their current values (rounded)
-4. Setting the head table FontBBox (xMin, yMin, xMax, yMax) to match the font’s glyph bounds
+## What the fix does
 
-## Installation
+1. Measures the real cap height and x-height from the `H` and `x` outlines, and the real glyph extremes.
+2. Keeps the total line height macOS uses today, so `line-height: normal` does not change for Mac users. It splits that total so the reference height is centered: `ascent = (total + capHeight) / 2`. Use `--align x` to center the x-height instead.
+3. Writes identical values to `hhea` and `OS/2` typo, sets both line gaps to 0, and turns on `USE_TYPO_METRICS`. It bumps OS/2 to version 4 if needed, because older versions ignore the flag.
+4. Sets `usWinAscent` and `usWinDescent` to cover the new metrics and every glyph, so nothing clips in Windows apps.
 
-### For Web Interface
+Glyph outlines, spacing, kerning and features are untouched.
+
+## Output formats
+
+| Format | Use | Notes |
+| --- | --- | --- |
+| `.woff2` | Web (default) | |
+| `.otf` | Desktop (default) | TrueType sources are converted to CFF. Quadratic to cubic is lossless, but TrueType hinting is dropped. Variable TrueType fonts keep their TrueType outlines. |
+| `.woff` | Web, legacy browsers | |
+| `.ttf` | Desktop and web | CFF sources are converted with cu2qu, within 1 font unit. CFF2 variable fonts are not supported. |
+
+## Web app
 
 ```bash
-# Install Node.js dependencies
 npm install
-
-# Create and activate a Python virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install Python dependencies
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# Run development server
-npm run dev
+npm run dev            # http://localhost:3000
 ```
 
-### For CLI Only
+Drop one or more fonts. Each file shows its own progress, and a bar shows total progress. Every font gets a report with:
+
+- the offset on each system before and after the fix,
+- a simulated button per system with helper lines,
+- live buttons rendered by your browser,
+- a table of every changed metric.
+
+Download each font as Web (`.woff2`), Desktop (`.otf`) or another format. Download all fonts at once as a `.zip`.
+
+## CLI
 
 ```bash
-# Create and activate a Python virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install Python dependencies
-pip install -r requirements.txt
+source venv/bin/activate
+python fix_vertical_metrics.py input.ttf output.woff2        # format follows the extension
+python fix_vertical_metrics.py input.ttf output.otf --align x # center lowercase instead of capitals
+python fix_vertical_metrics.py input.ttf --report            # print per-platform offsets only
 ```
 
-**Note:** Modern Python installations (especially via Homebrew) use "externally-managed-environment" protection. Using a virtual environment is the recommended approach and avoids permission issues.
+## API
 
-### Quick Setup Script
+`POST /api/fix-font` takes `multipart/form-data` with these fields:
 
-You can also use the provided setup script:
+- `file`: the font.
+- `align`: `cap` or `x`.
+- `formats`: comma-separated output formats, for example `woff2,otf`.
 
-```bash
-./setup.sh
-```
-
-This will automatically create a virtual environment and install all dependencies.
-
-## Usage
-
-### Web Interface
-
-1. Open the app in your browser (default: http://localhost:3000)
-2. Drag and drop a font file onto the upload area
-3. Select your desired output format (TTF, WOFF, or WOFF2)
-4. Click "Fix Vertical Metrics"
-5. Download the fixed font file
-
-### Command Line
-
-**Important:** Make sure to activate the virtual environment first if you used one during setup:
-
-```bash
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-Then run the script:
-
-```bash
-# Fix font and output as TTF
-python3 fix_vertical_metrics.py input.ttf output.ttf
-
-# Output as WOFF
-python3 fix_vertical_metrics.py input.ttf output.woff --flavor woff
-
-# Output as WOFF2
-python3 fix_vertical_metrics.py input.ttf output.woff2 --flavor woff2
-```
-
-### Test fonts: TTX → WOFF2 on save
-
-The `test-fonts/` directory can be used with a watcher that compiles `.ttx` files to `.woff2` whenever you save:
-
-```bash
-# Install dependencies (includes watchdog)
-pip install -r requirements.txt
-
-# Start the watcher (from project root)
-python scripts/ttx-to-woff2-watch.py
-```
-
-Put `.ttx` files in `test-fonts/`; saving a file will run `ttx -f --flavor woff2` and produce the corresponding `.woff2` in the same folder. See [test-fonts/README.md](./test-fonts/README.md) for details.
+It returns JSON with the before and after analysis, warnings, and base64 outputs. The 4 MB request limit matches Vercel.
 
 ## Deployment
 
-### Vercel (Recommended - All-in-One)
+See [DEPLOYMENT.md](./DEPLOYMENT.md). On Vercel, `api/fix-font.py` serves the API. Locally, `app/api/fix-font/route.ts` spawns the Python script. Both use `fix_vertical_metrics.py`.
 
-**Great news!** Vercel supports both Next.js and Python serverless functions, so you can deploy everything in one place!
+## Test fonts
 
-#### Quick Deploy
-
-1. Push your code to GitHub/GitLab/Bitbucket
-2. Import to [Vercel](https://vercel.com/new)
-3. Vercel will automatically:
-   - Detect Next.js and build the frontend
-   - Detect Python files in `/api` and use Python 3.9 runtime
-   - Install dependencies from `requirements.txt`
-4. Deploy! 🚀
-
-The app includes:
-
-- ✅ Next.js frontend (served from Vercel CDN)
-- ✅ Python serverless function at `/api/fix-font.py` (runs on Vercel's Python runtime)
-- ✅ Both on the same domain (no CORS issues!)
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions and alternative options.
-
-### Local Development
-
-The app works perfectly for local development:
-
-```bash
-# Install Node.js dependencies
-npm install
-
-# Create virtual environment and install Python dependencies
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Run development server
-npm run dev
-```
-
-Then visit http://localhost:3000
-
-**Note:** In local development, the app uses the Node.js API route (`app/api/fix-font/route.ts`) which calls the Python script. In production on Vercel, it automatically uses the Python serverless function (`api/fix-font.py`).
-
-## Requirements
-
-- Node.js 18+ (for web interface)
-- Python 3.7+ (for font processing)
-- fonttools (Python package)
-- brotli (Python package)
-
-## Notes
-
-The app applies the following vertical-metrics rules:
-
-- The **eighth bit** of <fsSelection /> must be set to 1.
-- <sTypoAscender /> and <ascent> (in hhea) = **average** of current ascent + sTypoAscender, rounded to integer (e.g. (750 + 1060) / 2 → 905).
-- <sTypoDescender /> and <descent> = **average** of current descent + sTypoDescender, rounded to integer (e.g. (-250 + -200) / 2 → -225).
-- <FontBBox> (in head) must match the font bounds: **(xMin, yMin, xMax, yMax)** from the glyph outlines (e.g. FontBBox value="-166 -225 1074 905" = xMin=-166, yMin=-225, xMax=1074, yMax=905).
+`test-fonts/` holds local fonts (git-ignored) for the `/renderer` page. `scripts/ttx-to-woff2-watch.py` recompiles `.ttx` files to `.woff2` on save. See [test-fonts/README.md](./test-fonts/README.md).
 
 ## License
 
