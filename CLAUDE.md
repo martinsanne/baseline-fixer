@@ -42,7 +42,7 @@ The project uses npm (`package-lock.json`), not pnpm.
 - **Alignment math lives in `lib/alignment.ts`**: `offsetUnits = (ascent + descent − targetHeight) / 2`, where descent is negative and a positive result means the text sits low.
   - `alignment-cell.tsx` draws each simulated button as SVG, with the baseline computed from the same math. The preview is exact in any browser and does not depend on the viewer's OS.
   - Keep the TS math and the Python `_print_report` consistent.
-- `app/renderer/page.tsx` is a manual test page that loads git-ignored files from `test-fonts/`.
+- `app/renderer/page.tsx` is a manual test page that loads git-ignored files from `test-fonts/` at runtime through `app/renderer/fonts/[name]/route.ts`. Never import them (e.g. with `next/font/local`): they are missing on Vercel and break the build.
 
 ## Conventions
 
