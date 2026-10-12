@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
-import type { FixResult } from '@/lib/font-types';
+import { desktopFormat, type FixResult } from '@/lib/font-types';
 import { AlignmentReport } from './alignment-report';
 import { DownloadControls, type DownloadChoice } from './download-controls';
 import { Drawer } from './drawer';
@@ -70,6 +70,7 @@ export function ReportDrawer({ open, job, readyJobs, onNavigate, onClose, onDown
               <DownloadControls
                 onDownload={(choice) => onDownload(job, choice)}
                 busy={job.busyFormat}
+                desktop={desktopFormat(job.result.before)}
                 disabled={job.status !== 'done'}
               />
             </div>

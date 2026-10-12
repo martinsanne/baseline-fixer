@@ -3,7 +3,7 @@
 import { describeNudge, describeOffset, offsetPx } from '@/lib/alignment';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/fix-font-client';
-import { PLATFORMS } from '@/lib/font-types';
+import { desktopFormat, PLATFORMS } from '@/lib/font-types';
 import { DownloadControls, Spinner, type DownloadChoice } from './download-controls';
 import type { Job } from './font-fixer';
 
@@ -78,7 +78,14 @@ function FileRow({ job, selected, onSelect, onRemove, onRetry, onDownload }: Fil
         </button>
 
         <div className="flex items-center gap-2 sm:justify-end">
-          {done && <DownloadControls onDownload={onDownload} busy={job.busyFormat} className="flex-1 sm:flex-none" />}
+          {done && job.result && (
+            <DownloadControls
+              onDownload={onDownload}
+              busy={job.busyFormat}
+              desktop={desktopFormat(job.result.before)}
+              className="flex-1 sm:flex-none"
+            />
+          )}
           {job.status === 'error' && (
             <button type="button" onClick={onRetry} className="h-8 rounded-full border border-ink-200 px-3.5 text-[13px] hover:border-ink-400">
               Retry

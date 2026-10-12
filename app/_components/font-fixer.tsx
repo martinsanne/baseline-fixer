@@ -12,6 +12,7 @@ import {
 } from '@/lib/fix-font-client';
 import {
   DEFAULT_FORMATS,
+  desktopFormat,
   FORMATS,
   type AlignTarget,
   type FixResult,
@@ -160,7 +161,8 @@ export function FontFixer() {
   const downloadOne = async (job: Job, choice: DownloadChoice) => {
     patchJob(job.id, null, { busyFormat: choice });
     try {
-      const formats = choice === 'all' ? ALL_FORMATS : [choice];
+      if (!job.result) throw new Error('Font is not ready yet');
+      const formats = formatsFor(job.result, choice);
       const outputs = await Promise.all(formats.map((format) => ensureOutput(job.id, format)));
       if (outputs.length === 1) {
         saveBlob(new Blob([base64ToBytes(outputs[0].data)], { type: FORMATS[formats[0]].mime }), outputs[0].filename);
@@ -176,12 +178,12 @@ export function FontFixer() {
 
   const downloadAll = async (choice: DownloadChoice) => {
     const ready = jobsRef.current.filter((job) => job.status === 'done');
-    const formats = choice === 'all' ? ALL_FORMATS : [choice];
     setBatchBusy(choice);
     try {
       const entries: ZipEntry[] = [];
       for (const job of ready) {
-        for (const format of formats) {
+        if (!job.result) continue;
+        for (const format of formatsFor(job.result, choice)) {
           const output = await ensureOutput(job.id, format);
           const folder = choice === 'all' ? `${format}/` : '';
           entries.push({ ...toZipEntry(output), name: folder + output.filename });
@@ -227,6 +229,7 @@ export function FontFixer() {
                 failed={failedCount}
                 progress={totalProgress}
                 busy={batchBusy}
+                desktop={batchDesktopFormat(readyJobs.map((job) => job.result))}
                 onDownloadAll={downloadAll}
               />
               <FileList
@@ -292,6 +295,16 @@ function AlignToggle({ value, onChange }: { value: AlignTarget; onChange: (value
       </div>
     </div>
   );
+}
+
+function formatsFor(result: FixResult, choice: DownloadChoice): OutputFormat[] {
+  if (choice === 'all') return ALL_FORMATS;
+  return [choice === 'desktop' ? desktopFormat(result.before) : choice];
+}
+
+function batchDesktopFormat(results: FixResult[]): OutputFormat | 'mixed' {
+  const formats = new Set(results.map((result) => desktopFormat(result.before)));
+  return formats.size > 1 ? 'mixed' : formats.values().next().value ?? 'otf';
 }
 
 function toZipEntry(output: ReadyOutput): ZipEntry {

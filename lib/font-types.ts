@@ -56,3 +56,8 @@ export const FORMATS: Record<OutputFormat, { label: string; use: string; mime: s
 };
 
 export const DEFAULT_FORMATS: OutputFormat[] = ['woff2', 'otf'];
+
+/** Format to install on desktop. Variable TrueType fonts keep glyf outlines, so they ship as .ttf. */
+export function desktopFormat(analysis: FontAnalysis): OutputFormat {
+  return analysis.variable && analysis.outline === 'TrueType' ? 'ttf' : 'otf';
+}

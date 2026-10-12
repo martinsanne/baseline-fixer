@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
+import type { OutputFormat } from '@/lib/font-types';
 import { DownloadControls, Spinner, type DownloadChoice } from './download-controls';
 import { ProgressBar } from './file-list';
 
@@ -10,11 +11,12 @@ interface BatchStatusProps {
   failed: number;
   progress: number;
   busy?: DownloadChoice;
+  desktop: OutputFormat | 'mixed';
   onDownloadAll: (choice: DownloadChoice) => void;
 }
 
 /** Summary bar above the file list: a progress bar while working, a solid confirmation when finished. */
-export function BatchStatus({ total, done, failed, progress, busy, onDownloadAll }: BatchStatusProps) {
+export function BatchStatus({ total, done, failed, progress, busy, desktop, onDownloadAll }: BatchStatusProps) {
   const complete = done + failed === total;
   const state = !complete ? 'working' : done > 0 ? 'done' : 'failed';
   const plural = (count: number) => (count === 1 ? 'font' : 'fonts');
@@ -60,7 +62,7 @@ export function BatchStatus({ total, done, failed, progress, busy, onDownloadAll
         {state === 'done' && done > 1 && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <span className="whitespace-nowrap text-[13px] text-white/80">All as .zip</span>
-            <DownloadControls onDownload={onDownloadAll} busy={busy} allowAll tone="inverted" />
+            <DownloadControls onDownload={onDownloadAll} busy={busy} desktop={desktop} allowAll tone="inverted" />
           </div>
         )}
       </div>

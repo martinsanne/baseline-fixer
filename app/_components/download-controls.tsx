@@ -3,7 +3,7 @@
 import { cn } from '@/lib/cn';
 import { FORMATS, type OutputFormat } from '@/lib/font-types';
 
-export type DownloadChoice = OutputFormat | 'all';
+export type DownloadChoice = OutputFormat | 'desktop' | 'all';
 
 interface DownloadControlsProps {
   onDownload: (choice: DownloadChoice) => void;
@@ -13,11 +13,21 @@ interface DownloadControlsProps {
   allowAll?: boolean;
   className?: string;
   tone?: 'default' | 'inverted';
+  /** Format behind the Desktop button; 'mixed' when a batch holds both. */
+  desktop?: OutputFormat | 'mixed';
 }
 
-const MORE_FORMATS: OutputFormat[] = ['woff', 'ttf'];
-
-export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allowAll, className, tone = 'default' }: DownloadControlsProps) {
+export function DownloadControls({
+  onDownload,
+  busy,
+  disabled,
+  size = 'sm',
+  allowAll,
+  className,
+  tone = 'default',
+  desktop = 'otf',
+}: DownloadControlsProps) {
+  const moreFormats = (['woff', 'ttf', 'otf'] as const).filter((format) => format !== desktop);
   const base = cn(
     'inline-flex items-center gap-1.5 rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
     size === 'sm' ? 'h-8 px-3.5 text-[13px]' : 'h-10 px-5 text-sm',
@@ -38,7 +48,7 @@ export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allo
       <button
         type="button"
         disabled={disabled || !!busy}
-        onClick={() => onDownload('otf')}
+        onClick={() => onDownload('desktop')}
         className={cn(
           base,
           tone === 'inverted'
@@ -46,8 +56,11 @@ export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allo
             : 'border border-ink-200 bg-white text-ink hover:border-ink-400',
         )}
       >
-        {isBusy('otf') ? <Spinner /> : <DownloadIcon />}
-        Desktop <span className={tone === 'inverted' ? 'text-white/60' : 'text-ink-400'}>.otf</span>
+        {isBusy('desktop') ? <Spinner /> : <DownloadIcon />}
+        Desktop{' '}
+        <span className={tone === 'inverted' ? 'text-white/60' : 'text-ink-400'}>
+          {desktop === 'mixed' ? '.otf/.ttf' : FORMATS[desktop].label}
+        </span>
       </button>
       <label className="relative">
         <span className="sr-only">More formats</span>
@@ -66,8 +79,8 @@ export function DownloadControls({ onDownload, busy, disabled, size = 'sm', allo
               : 'text-ink-500 hover:border-ink-200 hover:text-ink',
           )}
         >
-          <option value="">{busy && !['woff2', 'otf'].includes(busy) ? 'Preparing…' : 'More formats'}</option>
-          {MORE_FORMATS.map((format) => (
+          <option value="">{busy && !['woff2', 'desktop'].includes(busy) ? 'Preparing…' : 'More formats'}</option>
+          {moreFormats.map((format) => (
             <option key={format} value={format}>
               {FORMATS[format].label} · {FORMATS[format].use}
             </option>

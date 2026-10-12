@@ -19,7 +19,8 @@ CSS centers the *content area* (ascent + descent) in the line box, not the glyph
 1. Measures the real cap height and x-height from the `H` and `x` outlines, and the real glyph extremes.
 2. Keeps the total line height macOS uses today, so `line-height: normal` does not change for Mac users. It splits that total so the reference height is centered: `ascent = (total + capHeight) / 2`. Use `--align x` to center the x-height instead.
 3. Writes identical values to `hhea` and `OS/2` typo, sets both line gaps to 0, and turns on `USE_TYPO_METRICS`. It bumps OS/2 to version 4 if needed, because older versions ignore the flag.
-4. Sets `usWinAscent` and `usWinDescent` to cover the new metrics and every glyph, so nothing clips in Windows apps.
+4. Sets `usWinAscent` and `usWinDescent` to cover the new metrics and every glyph, so nothing clips in Windows apps. Variable fonts are also measured at their lightest and heaviest axis corners.
+5. For variable fonts, removes `MVAR` line-metric deltas (`hasc`, `tasc`, `hcla` and friends) so every instance shares the same line box on every platform. Axes, instances and outline variations are kept.
 
 Glyph outlines, spacing, kerning and features are untouched.
 
@@ -28,9 +29,9 @@ Glyph outlines, spacing, kerning and features are untouched.
 | Format | Use | Notes |
 | --- | --- | --- |
 | `.woff2` | Web (default) | |
-| `.otf` | Desktop (default) | TrueType sources are converted to CFF. Quadratic to cubic is lossless, but TrueType hinting is dropped. Variable TrueType fonts keep their TrueType outlines. |
+| `.otf` | Desktop (default) | TrueType sources are converted to CFF. Quadratic to cubic is lossless, but TrueType hinting is dropped. Variable TrueType fonts keep their TrueType outlines, so download those as `.ttf` instead. |
 | `.woff` | Web, legacy browsers | |
-| `.ttf` | Desktop and web | CFF sources are converted with cu2qu, within 1 font unit. CFF2 variable fonts are not supported. |
+| `.ttf` | Desktop and web; desktop default for variable TrueType | CFF sources are converted with cu2qu, within 1 font unit. CFF2 variable fonts are not supported. |
 
 ## Web app
 
@@ -49,7 +50,7 @@ Drop one or more fonts. Each file shows its own progress, and a bar shows total 
 - a table of every changed metric,
 - an optional "Fine-tune by eye" panel. Exact centering can look slightly low, so designers can nudge the text up or down, preview it, and apply the nudge to that font.
 
-Download each font as Web (`.woff2`), Desktop (`.otf`) or another format. Download all fonts at once as a `.zip`.
+Download each font as Web (`.woff2`), Desktop or another format. Desktop is `.otf`, or `.ttf` for variable TrueType fonts, so a variable web font (`.woff`/`.woff2`) becomes an installable variable font for apps like FontBase. Download all fonts at once as a `.zip`.
 
 ## CLI
 

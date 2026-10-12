@@ -61,7 +61,8 @@ USE_TYPO_METRICS = 1 << 7
 ALIGN_TARGETS = ("cap", "x")
 OUTPUT_FORMATS = ("woff2", "otf", "woff", "ttf")
 TRUETYPE_ONLY_TABLES = ("glyf", "loca", "cvt ", "fpgm", "prep", "hdmx", "LTSH", "VDMX", "gasp")
-MVAR_METRIC_TAGS = {"hasc", "hdsc", "hlgp", "hcla", "hcld"}
+# MVAR tags that would vary the line box (hhea, typo, win) across the design space.
+MVAR_LINE_TAGS = {"hasc", "hdsc", "hlgp", "tasc", "tdsc", "tlgp", "hcla", "hcld"}
 MAX_NUDGE = 100  # 1/1000 em, i.e. 10% of the font size either way
 
 
@@ -95,15 +96,29 @@ def _reference_heights(font: TTFont) -> tuple[int, int]:
     return measured("H", "sCapHeight", 0.7), measured("x", "sxHeight", 0.5)
 
 
-def _font_y_bounds(font: TTFont) -> tuple[int, int]:
-    """Real glyph extremes. head.yMin/yMax is often stale after manual edits, so measure."""
-    glyph_set = font.getGlyphSet()
-    pen = BoundsPen(glyph_set)
-    for name in font.getGlyphOrder():
-        glyph_set[name].draw(pen)
-    if not pen.bounds:
+def _font_y_bounds(font: TTFont, design_space: bool = False) -> tuple[int, int]:
+    """Real glyph extremes. head.yMin/yMax is often stale after manual edits, so measure.
+
+    With design_space, variable fonts are also measured at the all-minimum and
+    all-maximum axis corners, where outlines usually reach furthest (e.g. Black).
+    """
+    locations = [None]
+    if design_space and "fvar" in font:
+        axes = font["fvar"].axes
+        locations += [{a.axisTag: a.minValue for a in axes}, {a.axisTag: a.maxValue for a in axes}]
+
+    y_min = y_max = None
+    for location in locations:
+        glyph_set = font.getGlyphSet(location=location)
+        pen = BoundsPen(glyph_set)
+        for name in font.getGlyphOrder():
+            glyph_set[name].draw(pen)
+        if pen.bounds:
+            y_min = pen.bounds[1] if y_min is None else min(y_min, pen.bounds[1])
+            y_max = pen.bounds[3] if y_max is None else max(y_max, pen.bounds[3])
+    if y_min is None:
         return font["head"].yMin, font["head"].yMax
-    return round(pen.bounds[1]), round(pen.bounds[3])
+    return round(y_min), round(y_max)
 
 
 def _metric_tables(font: TTFont) -> dict:
@@ -223,7 +238,7 @@ def fix_font(font: TTFont, align: str = "cap", nudge: int = 0) -> list[str]:
     hhea, os2 = font["hhea"], font["OS/2"]
     cap_height, x_height = _reference_heights(font)
     target = cap_height if align == "cap" else x_height
-    y_min, y_max = _font_y_bounds(font)
+    y_min, y_max = _font_y_bounds(font, design_space=True)
 
     total = _total_line_height(_metric_tables(font), upm)
     total = max(total, target + round(upm * 0.2))
@@ -242,14 +257,41 @@ def fix_font(font: TTFont, align: str = "cap", nudge: int = 0) -> list[str]:
     if not os2.sxHeight:
         os2.sxHeight = x_height
 
-    if "MVAR" in font:
-        tags = {rec.ValueTag for rec in font["MVAR"].table.ValueRecord or []}
-        if tags & MVAR_METRIC_TAGS:
-            warnings.append(
-                "Variable font: MVAR varies line metrics across the design space, "
-                "so alignment is exact at the default instance only."
-            )
+    if _drop_mvar_line_metrics(font):
+        warnings.append(
+            "Variable font: removed MVAR line-metric variations so every weight and width "
+            "shares the same line box on every platform."
+        )
+    warnings += _instance_name_warnings(font)
     return warnings
+
+
+def _drop_mvar_line_metrics(font: TTFont) -> bool:
+    """MVAR deltas would shift hhea, typo and win differently per instance. Keep them constant."""
+    if "MVAR" not in font:
+        return False
+    table = font["MVAR"].table
+    records = table.ValueRecord or []
+    kept = [rec for rec in records if rec.ValueTag not in MVAR_LINE_TAGS]
+    if len(kept) == len(records):
+        return False
+    if kept:
+        table.ValueRecord = kept
+        table.ValueRecordCount = len(kept)
+    else:
+        del font["MVAR"]
+    return True
+
+
+def _instance_name_warnings(font: TTFont) -> list[str]:
+    """Web builds sometimes strip the names desktop apps list as styles."""
+    if "fvar" not in font:
+        return []
+    name = font["name"]
+    missing = [inst for inst in font["fvar"].instances if not name.getDebugName(inst.subfamilyNameID)]
+    if not missing:
+        return []
+    return [f"Variable font: {len(missing)} named instance(s) have no name, so desktop apps may not list those styles."]
 
 
 # --------------------------------------------------------------------------
@@ -349,7 +391,7 @@ def export(sfnt_bytes: bytes, fmt: str) -> tuple[bytes, list[str]]:
 
     if fmt == "otf" and outline == "TrueType":
         if "gvar" in font:
-            notes.append("Variable TrueType font kept its TrueType outlines inside the .otf file.")
+            notes.append("Variable TrueType font kept its TrueType outlines inside the .otf file. Use .ttf for desktop install.")
         else:
             _truetype_to_cff(font)
             notes.append("Converted TrueType outlines to CFF. TrueType hinting was dropped.")
