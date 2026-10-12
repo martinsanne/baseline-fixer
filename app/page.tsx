@@ -1,5 +1,6 @@
 import { AlignmentCell } from "./_components/alignment-cell";
 import { FontFixer } from "./_components/font-fixer";
+import { cn } from "@/lib/cn";
 
 export default function Home() {
   return (
@@ -18,6 +19,9 @@ export default function Home() {
           </a>
           <a href="#how" className="hover:text-ink">
             How it works
+          </a>
+          <a href="#changes" className="hidden hover:text-ink sm:inline">
+            What changes
           </a>
           <a href="#cli" className="hidden hover:text-ink sm:inline">
             CLI
@@ -42,6 +46,8 @@ export default function Home() {
 
         <Why />
         <How />
+        <Changes />
+        <Disclaimer />
         <Cli />
       </main>
 
@@ -61,6 +67,17 @@ export default function Home() {
           Max Kohler on fixing vertical metrics
         </a>
         .
+        <span className="mt-2 block">
+          Provided as is, without warranty. You are responsible for following
+          your font licenses.{" "}
+          <a
+            href="#license"
+            className="underline decoration-ink-200 underline-offset-4 hover:text-ink"
+          >
+            Read the disclaimer
+          </a>
+          .
+        </span>
       </footer>
     </div>
   );
@@ -196,12 +213,118 @@ function How() {
           </li>
         ))}
       </ol>
-      <p className="mt-6 max-w-3xl text-[15px] leading-relaxed text-ink-500">
-        Glyph shapes, spacing, kerning and features stay untouched, and
-        line-height: normal on macOS stays the same. The desktop .otf holds CFF
-        outlines. TrueType sources are converted losslessly, which drops
-        TrueType hinting.
+    </section>
+  );
+}
+
+function Changes() {
+  const groups = [
+    {
+      title: "Rewritten",
+      tone: "clay" as const,
+      items: [
+        "hhea ascender, descender and line gap",
+        "OS/2 typo ascender, descender and line gap",
+        "OS/2 win ascent and descent",
+        "The USE_TYPO_METRICS flag, and the OS/2 version raised to 4 if it is older",
+        "OS/2 cap height and x-height, only when the font leaves them empty",
+        "The modified date and checksums in the head table",
+      ],
+    },
+    {
+      title: "Kept as is",
+      tone: "olive" as const,
+      items: [
+        "Glyph outlines, advance widths and side bearings",
+        "Kerning, ligatures and every OpenType feature",
+        "Character mapping, variable axes and named instances",
+        "Font names, copyright, trademark, license text and URLs, designer, vendor and version",
+        "The content of every other table",
+      ],
+    },
+  ];
+  const caveats = [
+    "A .otf made from a TrueType font gets CFF outlines. The shapes convert losslessly, but TrueType hinting is removed.",
+    "A .ttf made from a CFF font gets TrueType outlines, approximated to within 1 font unit.",
+    "A digital signature (DSIG table), if the font has one, no longer matches the changed file.",
+    "Internal font names stay the same, so installing the fixed font next to the original can conflict. Only the file name gets an -aligned suffix.",
+  ];
+  return (
+    <section id="changes" className="scroll-mt-8 pt-24">
+      <p className="font-mono text-[11px] uppercase tracking-wider text-clay-dark">
+        What changes in the file
       </p>
+      <h2 className="mt-4 max-w-2xl font-serif text-4xl leading-tight tracking-tight">
+        A handful of numbers. Everything else stays.
+      </h2>
+      <div className="mt-10 grid gap-3 lg:grid-cols-2">
+        {groups.map((group) => (
+          <div
+            key={group.title}
+            className="rounded-2xl border border-ivory-300 bg-white p-6"
+          >
+            <h3 className="flex items-center gap-2.5 font-serif text-xl">
+              <span
+                aria-hidden
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  group.tone === "clay" ? "bg-clay" : "bg-olive",
+                )}
+              />
+              {group.title}
+            </h3>
+            <ul className="mt-4 space-y-2 text-[15px] leading-relaxed text-ink-500">
+              {group.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 rounded-2xl border border-ivory-300 p-6">
+        <h3 className="font-serif text-xl">Worth knowing</h3>
+        <ul className="mt-4 space-y-2 text-[15px] leading-relaxed text-ink-500">
+          {caveats.map((caveat) => (
+            <li key={caveat}>{caveat}</li>
+          ))}
+        </ul>
+        <p className="mt-4 text-[15px] leading-relaxed text-ink-500">
+          Uploaded fonts are processed in memory to build your downloads and are
+          not stored.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Disclaimer() {
+  return (
+    <section id="license" className="scroll-mt-8 pt-24">
+      <div className="max-w-3xl rounded-2xl border border-clay/40 bg-clay-light/30 p-6 sm:p-8">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-clay-dark">
+          Licensing and liability
+        </p>
+        <h2 className="mt-4 font-serif text-3xl leading-tight tracking-tight">
+          Use at your own risk.
+        </h2>
+        <div className="mt-4 space-y-4 text-[15px] leading-relaxed text-ink-700">
+          <p>
+            Changing a font file creates a modified version of it. Many
+            commercial font licenses forbid that, or allow it only for certain
+            uses. Open licenses can have conditions too: under the SIL Open Font
+            License, a modified font must not use a Reserved Font Name, and this
+            tool does not rename fonts. Check your license before you upload a
+            font or ship the result.
+          </p>
+          <p>
+            Baseline Fixer is provided as is, without warranty of any kind. You
+            alone are responsible for having the right to modify and use the
+            fonts you process. The authors are not liable for license breaches,
+            damaged or incorrect fonts, or any other loss that results from
+            using the tool. Test the output and keep your original files.
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

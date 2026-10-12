@@ -83,6 +83,15 @@ export function DropZone({ onFiles, compact, children }: DropZoneProps) {
         </button>
       )}
 
+      {!compact && (
+        <p className="mt-3 text-center text-[13px] text-ink-400">
+          Only upload fonts your license allows you to modify. Files are not stored.{' '}
+          <a href="#license" className="underline decoration-ink-200 underline-offset-4 hover:text-ink">
+            Disclaimer
+          </a>
+        </p>
+      )}
+
       {children}
 
       {dragging && compact && (
