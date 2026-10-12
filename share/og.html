@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="fonts.css">
+<style>
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  .wrap { display: grid; grid-template-columns: 1fr 470px; gap: 56px; height: 100%; padding: 64px 72px; align-items: center; }
+  h1 { font-size: 76px; line-height: 1.02; letter-spacing: -0.03em; font-weight: 400; }
+  .sub { margin-top: 26px; font-size: 25px; line-height: 1.4; color: var(--ink5); max-width: 560px; }
+  .brand { font-size: 26px; margin-bottom: 44px; }
+  .rows { display: flex; flex-direction: column; gap: 14px; }
+  .row { padding: 14px 22px 10px; }
+  .label { display: flex; justify-content: space-between; align-items: baseline; font-size: 18px; font-weight: 500; }
+  .label .tag { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 400; }
+  .bad { color: var(--clayd); } .good { color: var(--olive); }
+  .row.fixed { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+</style></head>
+<body>
+<div class="wrap">
+  <div>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="34" height="34"><rect x="1" y="5" width="22" height="14" rx="7" fill="none" stroke="#141413" stroke-width="1.5"/><line x1="0" x2="24" y1="12" y2="12" stroke="#d97757" stroke-width="1.5" stroke-dasharray="2 2"/></svg>
+      Baseline Fixer
+    </div>
+    <h1 class="serif">Text that sits in the middle. On every system.</h1>
+    <p class="sub">Fixes the font metrics that make button labels sit too high or too low on macOS, Windows and Android.</p>
+  </div>
+  <div class="rows">
+    <div class="card row"><div class="label">macOS <span class="tag bad">sits low ↓</span></div><div data-button="mac" data-width="426" data-size="46" data-guides="off" data-band="on"></div></div>
+    <div class="card row"><div class="label">Windows <span class="tag bad">sits high ↑</span></div><div data-button="windows" data-width="426" data-size="46" data-guides="off" data-band="on"></div></div>
+    <div class="card row fixed"><div class="label">Fixed, everywhere <span class="tag good">centered ✓</span></div><div data-button="fixed" data-width="426" data-size="46" data-guides="off" data-band="on"></div></div>
+  </div>
+</div>
+<script src="button.js"></script>
+</body></html>

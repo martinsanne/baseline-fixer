@@ -1,0 +1,192 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="fonts.css">
+<style>
+  html, body { width: 1600px; }
+  .page { padding: 72px 88px 64px; }
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-size: 24px; }
+  .pill { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--ink5); border: 1px solid var(--ivory3); border-radius: 99px; padding: 8px 16px; background: #fff; }
+  h1 { margin-top: 56px; font-size: 92px; line-height: 1.0; letter-spacing: -0.03em; font-weight: 400; max-width: 1200px; }
+  .lead { margin-top: 28px; font-size: 26px; line-height: 1.45; color: var(--ink5); max-width: 1060px; }
+  section { margin-top: 72px; padding-top: 56px; border-top: 1px solid var(--ivory3); }
+  .eyebrow { font-size: 15px; }
+  h2 { margin-top: 14px; font-size: 46px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 400; max-width: 1100px; }
+  p.body { font-size: 20px; line-height: 1.55; color: var(--ink7); }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+  .sys { padding: 22px 22px 14px; }
+  .sys .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .sys .name { font-size: 22px; font-weight: 600; }
+  .sys .reads { margin-top: 6px; font-size: 15px; color: var(--ink5); }
+  .sys .reads code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: var(--ivory2); padding: 2px 6px; border-radius: 6px; color: var(--ink); }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 15px; }
+  .bad { color: var(--clayd); } .good { color: var(--olive); }
+  .sys svg { width: 100%; height: auto; display: block; margin-top: 10px; }
+  .sys.after { border-color: var(--ink); }
+  .why { display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; margin-top: 32px; align-items: start; }
+  .formula { padding: 28px 30px; }
+  .formula .eq { font-family: 'JetBrains Mono', monospace; font-size: 22px; margin-top: 14px; color: var(--ink); line-height: 1.5; }
+  .formula .note { margin-top: 14px; font-size: 16px; color: var(--ink5); line-height: 1.5; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 36px; }
+  .step { padding: 26px; }
+  .step .n { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--ink4); }
+  .step h3 { margin-top: 22px; font-size: 27px; font-weight: 400; }
+  .step p { margin-top: 10px; font-size: 17px; line-height: 1.5; color: var(--ink5); }
+  .legend { display: flex; gap: 28px; margin-top: 20px; font-size: 15px; color: var(--ink5); }
+  .legend span { display: inline-flex; align-items: center; gap: 10px; }
+  .sw { width: 26px; height: 0; display: inline-block; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 36px; }
+  .list { padding: 28px 30px; }
+  .list h3 { display: flex; align-items: center; gap: 12px; font-size: 27px; font-weight: 400; }
+  .list ul { list-style: none; margin-top: 16px; }
+  .list li { font-size: 18px; line-height: 1.5; color: var(--ink5); padding: 7px 0; border-top: 1px solid var(--ivory2); }
+  .list li:first-child { border-top: 0; }
+  .use { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 36px; }
+  .flow { padding: 28px 30px; }
+  .flow h3, .cli h3 { font-size: 27px; font-weight: 400; }
+  .flow ol { list-style: none; margin-top: 18px; display: grid; gap: 14px; }
+  .flow li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; font-size: 18px; line-height: 1.45; color: var(--ink5); }
+  .flow li b { color: var(--ink); font-weight: 600; }
+  .flow .k { width: 32px; height: 32px; border-radius: 99px; background: var(--ivory2); display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--ink); }
+  .fmt { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 14px; border: 1px solid var(--ivory3); border-radius: 6px; padding: 1px 7px; margin-right: 4px; color: var(--ink); background: #fff; }
+  .cli { background: var(--ink); color: var(--ivory); border-radius: 20px; padding: 28px 30px; }
+  .cli pre { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 16.5px; line-height: 1.75; color: #e8e6dc; white-space: pre; }
+  .cli .c { color: #87867f; } .cli .p { color: var(--clay); } .cli .ok { color: #a8bb8c; }
+  footer { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--ivory3); display: flex; justify-content: space-between; font-size: 16px; color: var(--ink4); }
+</style></head>
+<body><div class="page">
+
+  <div class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="32" height="32"><rect x="1" y="5" width="22" height="14" rx="7" fill="none" stroke="#141413" stroke-width="1.5"/><line x1="0" x2="24" y1="12" y2="12" stroke="#d97757" stroke-width="1.5" stroke-dasharray="2 2"/></svg>
+      Baseline Fixer
+    </div>
+    <div class="pill">Web app + CLI · woff2 · otf · ttf · woff</div>
+  </div>
+
+  <h1 class="serif">Text that sits in the middle.<br>On every system.</h1>
+  <p class="lead">Most fonts put button labels slightly too high or too low, and by a different amount on macOS, Windows and Android. Baseline Fixer rewrites the font's vertical metrics once, in the file, so plain CSS centering just works everywhere.</p>
+
+  <!-- PROBLEM -->
+  <section>
+    <p class="eyebrow">The problem</p>
+    <h2 class="serif">One font, three stories about its height.</h2>
+    <div class="why">
+      <p class="body">Browsers don't center glyphs. They center the font's <em>content area</em>, the space between its declared ascender and descender. A font stores those values three times, and each system reads a different set. When the sets disagree, the same label lands in a different spot on each OS, and a padding hack that fixes one breaks another.</p>
+      <div class="card formula">
+        <p class="eyebrow">Offset per system</p>
+        <p class="eq">(ascent − |descent| − capHeight) / 2</p>
+        <p class="note">Positive means the text sits low. Zero only when the space above the capitals equals the space below the baseline. Independent of line-height.</p>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="card sys">
+        <div class="head"><span class="name">macOS · iOS</span><span class="tag bad">sits low ↓</span></div>
+        <p class="reads">Core Text reads <code>hhea</code></p>
+        <div data-button="mac" data-width="436" data-size="44" data-guides="off" data-band="on"></div>
+      </div>
+      <div class="card sys">
+        <div class="head"><span class="name">Windows</span><span class="tag bad">sits high ↑</span></div>
+        <p class="reads">DirectWrite reads <code>OS/2 usWin</code> (flag off)</p>
+        <div data-button="windows" data-width="436" data-size="44" data-guides="off" data-band="on"></div>
+      </div>
+      <div class="card sys">
+        <div class="head"><span class="name">Android · Linux</span><span class="tag bad">slightly low ↓</span></div>
+        <p class="reads">FreeType reads <code>hhea</code> or <code>OS/2 typo</code></p>
+        <div data-button="linux" data-width="436" data-size="44" data-guides="off" data-band="on"></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="border-top:2px dashed #87867f"></i>Button center</span>
+      <span><i class="sw" style="height:14px;background:#f3ddd3"></i>Cap height to baseline, off center</span>
+      <span><i class="sw" style="height:14px;background:#e3e8da"></i>Cap height to baseline, centered</span>
+      <span style="margin-left:auto;color:#87867f">Illustrative metrics, exaggerated for visibility</span>
+    </div>
+  </section>
+
+  <!-- FIX -->
+  <section>
+    <p class="eyebrow">The fix</p>
+    <h2 class="serif">Four changes to the font. Nothing else.</h2>
+    <div class="steps">
+      <div class="card step"><span class="n">01</span><h3 class="serif">Measure</h3><p>Reads the real cap height and x-height from the H and x outlines, plus the tallest and deepest glyphs.</p></div>
+      <div class="card step"><span class="n">02</span><h3 class="serif">Balance</h3><p>Keeps today's macOS line height and splits it so the space above the caps equals the space below the baseline.</p></div>
+      <div class="card step"><span class="n">03</span><h3 class="serif">Unify</h3><p>Writes identical values to hhea and OS/2 typo, zeroes line gaps and turns on USE_TYPO_METRICS.</p></div>
+      <div class="card step"><span class="n">04</span><h3 class="serif">Protect</h3><p>Sizes the Windows win metrics to cover every glyph, so accents never clip. Variable fonts measured at every axis corner.</p></div>
+    </div>
+    <div class="grid3">
+      <div class="card sys after">
+        <div class="head"><span class="name">macOS · iOS</span><span class="tag good">centered ✓</span></div>
+        <p class="reads">reads <code>hhea</code></p>
+        <div data-button="fixed" data-width="436" data-size="44" data-guides="off" data-band="on"></div>
+      </div>
+      <div class="card sys after">
+        <div class="head"><span class="name">Windows</span><span class="tag good">centered ✓</span></div>
+        <p class="reads">reads <code>OS/2 typo</code> (flag on)</p>
+        <div data-button="fixed" data-width="436" data-size="44" data-guides="off" data-band="on"></div>
+      </div>
+      <div class="card sys after">
+        <div class="head"><span class="name">Android · Linux</span><span class="tag good">centered ✓</span></div>
+        <p class="reads">reads <code>OS/2 typo</code> (flag on)</p>
+        <div data-button="fixed" data-width="436" data-size="44" data-guides="off" data-band="on"></div>
+      </div>
+    </div>
+    <div class="two">
+      <div class="card list">
+        <h3 class="serif"><span class="dot" style="background:#d97757"></span>Rewritten</h3>
+        <ul>
+          <li>hhea ascender, descender and line gap</li>
+          <li>OS/2 typo and win metrics</li>
+          <li>USE_TYPO_METRICS flag (OS/2 raised to v4 if older)</li>
+          <li>MVAR line-metric deltas in variable fonts</li>
+        </ul>
+      </div>
+      <div class="card list">
+        <h3 class="serif"><span class="dot" style="background:#788c5d"></span>Kept as is</h3>
+        <ul>
+          <li>Glyph outlines, widths and spacing</li>
+          <li>Kerning, ligatures and every OpenType feature</li>
+          <li>Variable axes and named instances</li>
+          <li>Names, copyright, license and version</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- USE -->
+  <section>
+    <p class="eyebrow">How to use it</p>
+    <h2 class="serif">Drop fonts in. Get centered fonts out.</h2>
+    <div class="use">
+      <div class="card flow">
+        <h3 class="serif">Web app</h3>
+        <ol>
+          <li><span class="k">1</span><span><b>Drop one or many fonts.</b> Any of woff2, woff, otf, ttf, static or variable.</span></li>
+          <li><span class="k">2</span><span><b>Read the report.</b> Offset per system before and after, simulated and live buttons, every changed metric.</span></li>
+          <li><span class="k">3</span><span><b>Fine-tune by eye</b> if exact center looks a touch low. Nudge, preview, apply.</span></li>
+          <li><span class="k">4</span><span><b>Download</b> <span class="fmt">.woff2</span> for web, <span class="fmt">.otf</span>/<span class="fmt">.ttf</span> for desktop, or all as a <span class="fmt">.zip</span>.</span></li>
+        </ol>
+      </div>
+      <div class="cli">
+        <h3 class="serif">CLI</h3>
+<pre><span class="c"># fix one font, format follows the extension</span>
+<span class="p">$</span> python fix_vertical_metrics.py in.ttf out.woff2
+
+<span class="c"># center lowercase instead of capitals</span>
+<span class="p">$</span> python fix_vertical_metrics.py in.ttf out.otf --align x
+
+<span class="c"># check offsets without writing anything</span>
+<span class="p">$</span> python fix_vertical_metrics.py in.ttf --report
+  mac      before: 1.14px low @16px  <span class="ok">after: centered</span>
+  windows  before: 1.14px low @16px  <span class="ok">after: centered</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Built on fontTools · Next.js · Python on Vercel</span>
+    <span>Fonts are processed in memory and never stored</span>
+  </footer>
+</div>
+<script src="button.js"></script>
+<script>document.body.dataset.h = document.documentElement.scrollHeight;</script>
+</body></html>

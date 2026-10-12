@@ -1,0 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=block');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --ivory:#faf9f5; --ivory2:#f0eee6; --ivory3:#e8e6dc; --ink:#141413; --ink7:#3d3d3a; --ink5:#5e5d59; --ink4:#87867f; --clay:#d97757; --clayd:#c6613f; --clayl:#f3ddd3; --olive:#788c5d; --olivel:#e3e8da; --sky:#6a9bcc; }
+body { background: var(--ivory); color: var(--ink); font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; }
+.serif { font-family: 'Source Serif 4', Georgia, serif; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.eyebrow { font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .08em; color: var(--clayd); }
+.brand { display: flex; align-items: center; gap: 12px; font-weight: 500; letter-spacing: -0.01em; }
+.card { background: #fff; border: 1px solid var(--ivory3); border-radius: 20px; }
+.dot { width: 10px; height: 10px; border-radius: 99px; display: inline-block; }

@@ -24,6 +24,7 @@ export const metadata: Metadata = {
   title: "Baseline Fixer — center text in every button, on every system",
   description:
     "Fonts sit too high or too low in buttons, and differently on macOS, Windows and Android. Upload a font, see the offset per system, and download a fixed version.",
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

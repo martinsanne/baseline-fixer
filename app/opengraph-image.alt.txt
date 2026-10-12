@@ -1,0 +1,1 @@
+Baseline Fixer: three buttons showing a label sitting low on macOS, high on Windows, and centered after the fix.
