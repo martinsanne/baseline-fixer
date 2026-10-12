@@ -1,5 +1,5 @@
 {
-  "name": "vertical-metrics",
+  "name": "baseline-fixer",
   "version": "0.1.0",
   "private": true,
   "scripts": {

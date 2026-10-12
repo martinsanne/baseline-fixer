@@ -21,7 +21,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vertical Metrics — center text in every button, on every system",
+  title: "Baseline Fixer — center text in every button, on every system",
   description:
     "Fonts sit too high or too low in buttons, and differently on macOS, Windows and Android. Upload a font, see the offset per system, and download a fixed version.",
 };

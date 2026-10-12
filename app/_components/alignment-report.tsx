@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import {
+  describeNudge,
   describeOffset,
   detectIssues,
   lineHeightNormal,
+  nudgePx,
   offsetPx,
   platformSpread,
   REFERENCE_PX,
@@ -13,10 +15,12 @@ import {
 import { cn } from '@/lib/cn';
 import { PLATFORMS, type FixResult, type FontAnalysis, type PlatformKey } from '@/lib/font-types';
 import { AlignmentCell, AlignmentLegend } from './alignment-cell';
+import { FineTune } from './fine-tune';
 import type { Job } from './font-fixer';
+import { LiveButton } from './live-button';
 import { cssFontFamily, useFontFace } from './use-font-face';
 
-export function AlignmentReport({ job }: { job: Job & { result: FixResult } }) {
+export function AlignmentReport({ job, onNudge }: { job: Job & { result: FixResult }; onNudge: (nudge: number) => void }) {
   const { result } = job;
   const [text, setText] = useState(result.align === 'cap' ? 'Get Started' : 'get started');
   const inputFamily = `vm-in-${job.id}`;
@@ -75,7 +79,15 @@ export function AlignmentReport({ job }: { job: Job & { result: FixResult } }) {
         outputFamily={outputReady ? cssFontFamily(outputFamily) : undefined}
       />
 
-      <MetricChanges before={result.before} after={result.after} />
+      <MetricChanges result={result} />
+
+      <FineTune
+        applied={result.nudge}
+        family={outputReady ? cssFontFamily(outputFamily) : undefined}
+        text={text || ' '}
+        busy={job.status !== 'done'}
+        onApply={onNudge}
+      />
 
       {(result.warnings.length > 0 || hasNotes(result)) && (
         <section className="space-y-2 text-sm text-ink-500">
@@ -96,11 +108,12 @@ function hasNotes(result: FixResult) {
 }
 
 function Summary({ result }: { result: FixResult }) {
-  const { before, after, align } = result;
+  const { before, after, align, nudge } = result;
   const ref = align === 'cap' ? 'Capitals' : 'Lowercase letters';
   const worst = Math.max(...PLATFORMS.map((p) => Math.abs(offsetPx(before, p.key, align))));
   const spread = platformSpread(before, align);
-  const afterWorst = Math.max(...PLATFORMS.map((p) => Math.abs(offsetPx(after, p.key, align))));
+  const afterWorst = Math.max(...PLATFORMS.map((p) => Math.abs(offsetPx(after, p.key, align) - nudgePx(nudge))));
+  const nudgeNote = nudge ? `, then moves them ${describeNudge(nudge)} as you set` : '';
   const issues = detectIssues(before, align);
 
   const headline =
@@ -108,7 +121,7 @@ function Summary({ result }: { result: FixResult }) {
       ? `${ref} were already within a quarter pixel of center. The refined file still makes every system read the same metrics.`
       : `${ref} sat up to ${worst.toFixed(1)}px off-center at ${REFERENCE_PX}px${
           spread >= 0.25 ? `, and systems disagreed by ${spread.toFixed(1)}px` : ', the same on every system'
-        }. The refined font ${afterWorst < 0.05 ? 'centers them exactly' : `keeps them within ${afterWorst.toFixed(2)}px`} everywhere.`;
+        }. The refined font ${afterWorst < 0.05 ? 'centers them exactly' : `keeps them within ${afterWorst.toFixed(2)}px`} everywhere${nudgeNote}.`;
 
   return (
     <section className="space-y-8">
@@ -197,6 +210,7 @@ function PlatformRow({
 }) {
   const cell = (analysis: FontAnalysis, tone: 'before' | 'after') => {
     const px = offsetPx(analysis, platform.key, result.align);
+    const intendedPx = tone === 'after' ? nudgePx(result.nudge) : 0;
     return (
       <div className={cn('px-3 py-3 sm:px-4', tone === 'before' ? 'bg-ivory-100' : 'bg-white')}>
         <AlignmentCell
@@ -206,8 +220,9 @@ function PlatformRow({
           fontFamily={fontFamily}
           text={text}
           tone={tone}
+          intendedOffset={(-intendedPx / REFERENCE_PX) * analysis.unitsPerEm}
         />
-        <p className={cn('mt-1 text-center font-mono text-[11px]', Math.abs(px) >= 0.25 ? 'text-clay-dark' : 'text-olive')}>
+        <p className={cn('mt-1 text-center font-mono text-[11px]', Math.abs(px - intendedPx) >= 0.25 ? 'text-clay-dark' : 'text-olive')}>
           {describeOffset(px)} at {REFERENCE_PX}px · {analysis.platforms[platform.key].source}
         </p>
       </div>
@@ -266,25 +281,8 @@ function LiveComparison({ text, inputFamily, outputFamily }: { text: string; inp
   );
 }
 
-function LiveButton({ family, text, variant }: { family?: string; text: string; variant: 'solid' | 'outline' | 'tag' }) {
-  return (
-    <span
-      className={cn(
-        'relative inline-flex items-center justify-center whitespace-nowrap leading-none',
-        variant === 'solid' && 'h-12 rounded-full bg-ink px-6 text-[20px] text-ivory',
-        variant === 'outline' && 'h-12 rounded-lg border border-ink px-5 text-[20px]',
-        variant === 'tag' && 'h-7 rounded-md bg-clay-light px-2.5 text-[13px] tracking-wide text-ink',
-        !family && 'opacity-40',
-      )}
-      style={family ? { fontFamily: family } : undefined}
-    >
-      {text}
-      <span aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-clay" />
-    </span>
-  );
-}
-
-function MetricChanges({ before, after }: { before: FontAnalysis; after: FontAnalysis }) {
+function MetricChanges({ result }: { result: FixResult }) {
+  const { before, after } = result;
   const rows: [string, string | number, string | number][] = [
     ['hhea ascender / descender', pair(before.tables.hhea), pair(after.tables.hhea)],
     ['hhea line gap', before.tables.hhea.lineGap, after.tables.hhea.lineGap],
@@ -302,6 +300,7 @@ function MetricChanges({ before, after }: { before: FontAnalysis; after: FontAna
         ] as [string, string, string],
     ),
     ['Cap height / x-height (measured)', `${before.capHeight} / ${before.xHeight}`, `${after.capHeight} / ${after.xHeight}`],
+    ...(result.nudge ? [['Optical nudge', describeNudge(0), `${describeNudge(result.nudge)} at ${REFERENCE_PX}px`] as [string, string, string]] : []),
   ];
 
   return (

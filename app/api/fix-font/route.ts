@@ -48,10 +48,11 @@ export async function POST(request: NextRequest) {
 
   const align = form.get('align') === 'x' ? 'x' : 'cap';
   const formats = String(form.get('formats') ?? 'woff2');
+  const nudge = Number(form.get('nudge') ?? 0) || 0;
   const data = Buffer.from(await file.arrayBuffer()).toString('base64');
 
   try {
-    const { code, stdout, stderr } = await runPython({ filename: file.name, data, align, formats });
+    const { code, stdout, stderr } = await runPython({ filename: file.name, data, align, formats, nudge });
     if (stderr) console.error('fix_vertical_metrics.py:', stderr);
     const result = JSON.parse(stdout || '{}');
     if (code !== 0 || result.error) {

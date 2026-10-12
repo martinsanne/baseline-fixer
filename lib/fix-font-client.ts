@@ -11,7 +11,7 @@ export function isFontFile(file: File) {
 /** Upload one font. XHR (not fetch) so upload progress can be reported. */
 export function requestFix(
   file: File,
-  options: { align: AlignTarget; formats: OutputFormat[] },
+  options: { align: AlignTarget; formats: OutputFormat[]; nudge: number },
   onUploadProgress: (fraction: number) => void,
 ): Promise<FixResult> {
   return new Promise((resolve, reject) => {
@@ -19,6 +19,7 @@ export function requestFix(
     form.append('file', file);
     form.append('align', options.align);
     form.append('formats', options.formats.join(','));
+    form.append('nudge', String(options.nudge));
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/fix-font');

@@ -35,6 +35,7 @@ export type FontOutput =
 export interface FixResult {
   filename: string;
   align: AlignTarget;
+  nudge: number; // 1/1000 em, positive = text moved up from exact center
   before: FontAnalysis;
   after: FontAnalysis;
   warnings: string[];

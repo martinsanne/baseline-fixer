@@ -1,4 +1,4 @@
-# Vertical Metrics
+# Baseline Fixer
 
 Fonts often sit too high or too low inside buttons, and by a different amount on macOS, Windows and Android. This web app and CLI rewrite a font's vertical metrics so text is optically centered in its line box on every system and in every browser engine.
 
@@ -46,7 +46,8 @@ Drop one or more fonts. Each file shows its own progress, and a bar shows total 
 - the offset on each system before and after the fix,
 - a simulated button per system with helper lines,
 - live buttons rendered by your browser,
-- a table of every changed metric.
+- a table of every changed metric,
+- an optional "Fine-tune by eye" panel. Exact centering can look slightly low, so designers can nudge the text up or down, preview it, and apply the nudge to that font.
 
 Download each font as Web (`.woff2`), Desktop (`.otf`) or another format. Download all fonts at once as a `.zip`.
 
@@ -56,6 +57,7 @@ Download each font as Web (`.woff2`), Desktop (`.otf`) or another format. Downlo
 source venv/bin/activate
 python fix_vertical_metrics.py input.ttf output.woff2        # format follows the extension
 python fix_vertical_metrics.py input.ttf output.otf --align x # center lowercase instead of capitals
+python fix_vertical_metrics.py input.ttf output.woff2 --nudge 15 # lift text 1.5% of the font size above center
 python fix_vertical_metrics.py input.ttf --report            # print per-platform offsets only
 ```
 
@@ -66,6 +68,7 @@ python fix_vertical_metrics.py input.ttf --report            # print per-platfor
 - `file`: the font.
 - `align`: `cap` or `x`.
 - `formats`: comma-separated output formats, for example `woff2,otf`.
+- `nudge` (optional): optical nudge in 1/1000 em, from -100 to 100. Positive moves text up. Defaults to 0, exact center.
 
 It returns JSON with the before and after analysis, warnings, and base64 outputs. The 4 MB request limit matches Vercel.
 

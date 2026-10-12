@@ -5,6 +5,7 @@ multipart/form-data fields:
   file     the font (.ttf, .otf, .woff, .woff2)
   align    "cap" (default) or "x"
   formats  comma-separated output formats, e.g. "woff2,otf"
+  nudge    optional optical nudge in 1/1000 em, positive moves text up
 
 Responds with the JSON produced by fix_vertical_metrics.process().
 Local development uses app/api/fix-font/route.ts, which calls the same module.
@@ -21,7 +22,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from fix_vertical_metrics import parse_formats, process  # noqa: E402
+from fix_vertical_metrics import parse_formats, parse_nudge, process  # noqa: E402
 
 MAX_BYTES = 4 * 1024 * 1024
 
@@ -72,6 +73,7 @@ class handler(BaseHTTPRequestHandler):
                 file_field["filename"] or "font.ttf",
                 align if align in ("cap", "x") else "cap",
                 parse_formats(text("formats", "woff2")),
+                parse_nudge(text("nudge", "0")),
             )
             self._send_json(200, result)
         except Exception as exc:

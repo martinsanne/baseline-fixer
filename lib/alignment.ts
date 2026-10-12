@@ -21,6 +21,16 @@ export function offsetPx(analysis: FontAnalysis, platform: PlatformKey, align: A
   return (units / analysis.unitsPerEm) * fontSize;
 }
 
+/** The offset the user asked for: a positive nudge lifts the text, which reads as a negative (high) offset. */
+export function nudgePx(nudge: number, fontSize = REFERENCE_PX) {
+  return (-nudge / 1000) * fontSize;
+}
+
+export function describeNudge(nudge: number, fontSize = REFERENCE_PX) {
+  if (nudge === 0) return 'exact center';
+  return `${Math.abs(nudge / 1000 * fontSize).toFixed(2)}px ${nudge > 0 ? 'up' : 'down'}`;
+}
+
 export function describeOffset(px: number) {
   if (Math.abs(px) < 0.05) return 'centered';
   return `${Math.abs(px).toFixed(1)}px ${px > 0 ? 'low' : 'high'}`;

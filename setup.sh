@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Setup script for Vertical Metrics Fixer
+# Setup script for Baseline Fixer
 # This script helps set up the project with the correct Python version
 
-echo "🔧 Setting up Vertical Metrics Fixer..."
+echo "🔧 Setting up Baseline Fixer..."
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then

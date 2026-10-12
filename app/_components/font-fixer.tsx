@@ -29,6 +29,7 @@ export interface Job {
   id: string;
   run: number;
   file: File;
+  nudge: number; // optional optical nudge in 1/1000 em, set per font from the report
   status: 'queued' | 'uploading' | 'processing' | 'done' | 'error';
   progress: number;
   result?: FixResult;
@@ -75,13 +76,13 @@ export function FontFixer() {
       };
 
       try {
-        const result = await requestFix(job.file, { align: alignRef.current, formats: DEFAULT_FORMATS }, (fraction) => {
+        const result = await requestFix(job.file, { align: alignRef.current, formats: DEFAULT_FORMATS, nudge: job.nudge }, (fraction) => {
           if (fraction >= 1) startProcessing();
           else patchJob(id, run, { progress: 0.02 + fraction * 0.48 });
         });
         patchJob(id, run, { status: 'done', progress: 1, result });
       } catch (error) {
-        patchJob(id, run, { status: 'error', progress: 1, error: error instanceof Error ? error.message : String(error) });
+        patchJob(id, run, { status: 'error', progress: 1, result: undefined, error: error instanceof Error ? error.message : String(error) });
       } finally {
         if (creep) clearInterval(creep);
       }
@@ -110,7 +111,7 @@ export function FontFixer() {
     setNotice(rejected.length ? `Skipped: ${rejected.join('; ')}.` : null);
     setJobs((prev) => [
       ...prev,
-      ...accepted.map((file) => ({ id: crypto.randomUUID(), run: 0, file, status: 'queued' as const, progress: 0 })),
+      ...accepted.map((file) => ({ id: crypto.randomUUID(), run: 0, file, nudge: 0, status: 'queued' as const, progress: 0 })),
     ]);
   };
 
@@ -128,6 +129,12 @@ export function FontFixer() {
     requeue(() => true);
   };
 
+  // Keeps the previous result so the report stays open while the nudged font is processed.
+  const changeNudge = (id: string, nudge: number) =>
+    setJobs((prev) =>
+      prev.map((job) => (job.id === id ? { ...job, nudge, run: job.run + 1, status: 'queued', progress: 0, error: undefined } : job)),
+    );
+
   const removeJob = (id: string) => setJobs((prev) => prev.filter((job) => job.id !== id));
 
   const openReport = (id: string) => {
@@ -143,7 +150,7 @@ export function FontFixer() {
     if (existing && 'data' in existing) return existing;
     if (existing && 'error' in existing) throw new Error(existing.error);
 
-    const fresh = await requestFix(job.file, { align: job.result.align, formats: [format] }, () => {});
+    const fresh = await requestFix(job.file, { align: job.result.align, formats: [format], nudge: job.result.nudge }, () => {});
     const output = fresh.outputs[format];
     patchJob(id, job.run, (j) => (j.result ? { result: { ...j.result, outputs: { ...j.result.outputs, [format]: output } } } : {}));
     if (!output || 'error' in output) throw new Error(output?.error ?? `Could not create ${FORMATS[format].label}`);
@@ -191,9 +198,11 @@ export function FontFixer() {
   const readyJobs = jobs.filter((job): job is Job & { result: FixResult } => job.status === 'done' && !!job.result);
   const failedCount = jobs.filter((job) => job.status === 'error').length;
   const totalProgress = jobs.length ? jobs.reduce((sum, job) => sum + job.progress, 0) / jobs.length : 0;
-  const selected = readyJobs.find((job) => job.id === selectedId);
+  // A font being re-nudged keeps its last result, so the drawer can stay on it.
+  const viewableJobs = jobs.filter((job): job is Job & { result: FixResult } => !!job.result);
+  const selected = viewableJobs.find((job) => job.id === selectedId);
 
-  // Close the report if its font was removed or is being reprocessed.
+  // Close the report if its font was removed or is being reprocessed from scratch.
   useEffect(() => {
     if (reportOpen && !selected) setReportOpen(false);
   }, [reportOpen, selected]);
@@ -245,10 +254,11 @@ export function FontFixer() {
       <ReportDrawer
         open={reportOpen}
         job={selected}
-        readyJobs={readyJobs}
+        readyJobs={viewableJobs}
         onNavigate={setSelectedId}
         onClose={() => setReportOpen(false)}
         onDownload={downloadOne}
+        onNudge={changeNudge}
       />
     </>
   );

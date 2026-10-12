@@ -1,6 +1,6 @@
 'use client';
 
-import { describeOffset, offsetPx } from '@/lib/alignment';
+import { describeNudge, describeOffset, offsetPx } from '@/lib/alignment';
 import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/fix-font-client';
 import { PLATFORMS } from '@/lib/font-types';
@@ -127,12 +127,15 @@ function StatusText({ job }: { job: Job }) {
           0,
         );
       const after = worst(result.after);
+      const outcome = result.nudge
+        ? `nudged ${describeNudge(result.nudge)} on every system`
+        : describeOffset(after) === 'centered'
+          ? 'centered on every system'
+          : `${describeOffset(after)} at most`;
       return (
         <span>
           Was <span className="text-ink">{describeOffset(worst(result.before))}</span> at worst →{' '}
-          <span className="text-olive">
-            {describeOffset(after) === 'centered' ? 'centered on every system' : `${describeOffset(after)} at most`}
-          </span>
+          <span className="text-olive">{outcome}</span>
         </span>
       );
     }

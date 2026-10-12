@@ -29,11 +29,14 @@ What the fix does
    to 0 and turns on USE_TYPO_METRICS (bumping OS/2 to version 4 if needed).
 4. Sets usWinAscent/usWinDescent to the larger of the new metrics and the
    glyph bounds, so nothing gets clipped in Windows desktop apps.
+5. Optionally applies a manual optical nudge (--nudge, in 1/1000 em, positive
+   moves text up). Exact centering can look low; designers may lift it.
 
 Usage
 -----
     python fix_vertical_metrics.py input.ttf output.woff2
     python fix_vertical_metrics.py input.woff2 output.otf --align x
+    python fix_vertical_metrics.py input.ttf output.woff2 --nudge 15  # lift text 1.5% of the em
     python fix_vertical_metrics.py input.ttf --report          # analysis only
     python fix_vertical_metrics.py --json-stdin                # used by the web API
 """
@@ -59,6 +62,7 @@ ALIGN_TARGETS = ("cap", "x")
 OUTPUT_FORMATS = ("woff2", "otf", "woff", "ttf")
 TRUETYPE_ONLY_TABLES = ("glyf", "loca", "cvt ", "fpgm", "prep", "hdmx", "LTSH", "VDMX", "gasp")
 MVAR_METRIC_TAGS = {"hasc", "hdsc", "hlgp", "hcla", "hcld"}
+MAX_NUDGE = 100  # 1/1000 em, i.e. 10% of the font size either way
 
 
 # --------------------------------------------------------------------------
@@ -204,10 +208,15 @@ def _ensure_os2_v4(os2) -> None:
     os2.version = 4
 
 
-def fix_font(font: TTFont, align: str = "cap") -> list[str]:
-    """Rewrite vertical metrics in place. Returns warnings."""
+def fix_font(font: TTFont, align: str = "cap", nudge: int = 0) -> list[str]:
+    """Rewrite vertical metrics in place. Returns warnings.
+
+    nudge moves the text up (positive) or down from exact center, in 1/1000 em.
+    """
     if align not in ALIGN_TARGETS:
         raise ValueError(f"align must be one of {ALIGN_TARGETS}")
+    if abs(nudge) > MAX_NUDGE:
+        raise ValueError(f"nudge must be between -{MAX_NUDGE} and {MAX_NUDGE}")
 
     warnings = []
     upm = font["head"].unitsPerEm
@@ -218,7 +227,8 @@ def fix_font(font: TTFont, align: str = "cap") -> list[str]:
 
     total = _total_line_height(_metric_tables(font), upm)
     total = max(total, target + round(upm * 0.2))
-    ascent = round((total + target) / 2)
+    # Lowering ascent and descent together raises the baseline inside the same line box.
+    ascent = round((total + target) / 2) - round(nudge * upm / 1000)
     descent = ascent - total  # negative
 
     hhea.ascent, hhea.descent, hhea.lineGap = ascent, descent, 0
@@ -364,11 +374,11 @@ def output_filename(filename: str, fmt: str) -> str:
     return f"{base}-aligned.{fmt}"
 
 
-def process(data: bytes, filename: str, align: str = "cap", formats=("woff2",)) -> dict:
+def process(data: bytes, filename: str, align: str = "cap", formats=("woff2",), nudge: int = 0) -> dict:
     """Analyze, fix and export a font. Returns a JSON-serializable dict."""
     font = TTFont(io.BytesIO(data), lazy=False)
     before = analyze(font)
-    warnings = fix_font(font, align)
+    warnings = fix_font(font, align, nudge)
     font.flavor = None
     sfnt = io.BytesIO()
     font.save(sfnt)
@@ -391,6 +401,7 @@ def process(data: bytes, filename: str, align: str = "cap", formats=("woff2",)) 
     return {
         "filename": filename,
         "align": align,
+        "nudge": nudge,
         "before": before,
         "after": after,
         "warnings": warnings,
@@ -406,8 +417,17 @@ def parse_formats(raw) -> list[str]:
     return formats or ["woff2"]
 
 
+def parse_nudge(raw) -> int:
+    """Integer 1/1000 em, clamped to MAX_NUDGE. Anything unparseable means no nudge."""
+    try:
+        value = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return 0
+    return max(-MAX_NUDGE, min(MAX_NUDGE, value))
+
+
 def _run_json_stdin() -> int:
-    """Read {filename, data(base64), align, formats} on stdin, write the result JSON to stdout."""
+    """Read {filename, data(base64), align, formats, nudge} on stdin, write the result JSON to stdout."""
     try:
         request = json.load(sys.stdin)
         result = process(
@@ -415,6 +435,7 @@ def _run_json_stdin() -> int:
             request.get("filename") or "font.ttf",
             request.get("align") or "cap",
             parse_formats(request.get("formats")),
+            parse_nudge(request.get("nudge")),
         )
         json.dump(result, sys.stdout)
         return 0
@@ -437,6 +458,9 @@ def _print_report(result: dict) -> None:
     for platform in ("mac", "windows", "linux"):
         print(f"  {platform:8} before: {offset(before['platforms'][platform], before[key], before['unitsPerEm'])}")
         print(f"  {'':8} after:  {offset(after['platforms'][platform], after[key], after['unitsPerEm'])}")
+    if result["nudge"]:
+        direction = "up" if result["nudge"] > 0 else "down"
+        print(f"  nudged {abs(result['nudge']) / 1000 * 16:.2f}px {direction} @16px on purpose")
     for warning in result["warnings"]:
         print(f"  ! {warning}")
 
@@ -446,6 +470,8 @@ def main() -> int:
     parser.add_argument("input", nargs="?", help="Input font (.ttf, .otf, .woff, .woff2)")
     parser.add_argument("output", nargs="?", help="Output path; format from extension (.woff2, .otf, .woff, .ttf)")
     parser.add_argument("--align", choices=ALIGN_TARGETS, default="cap", help="Center capitals (default) or lowercase x-height")
+    parser.add_argument("--nudge", type=int, default=0,
+                        help=f"Optical nudge in 1/1000 em; positive moves text up (max ±{MAX_NUDGE})")
     parser.add_argument("--flavor", choices=OUTPUT_FORMATS, help="Override output format (legacy option)")
     parser.add_argument("--report", action="store_true", help="Print per-platform offsets before and after")
     parser.add_argument("--json-stdin", action="store_true", help=argparse.SUPPRESS)
@@ -455,6 +481,8 @@ def main() -> int:
         return _run_json_stdin()
     if not args.input or (not args.output and not args.report):
         parser.error("input and output are required (or use --report)")
+    if abs(args.nudge) > MAX_NUDGE:
+        parser.error(f"--nudge must be between -{MAX_NUDGE} and {MAX_NUDGE}")
 
     with open(args.input, "rb") as handle:
         data = handle.read()
@@ -467,7 +495,7 @@ def main() -> int:
         formats = [fmt]
 
     try:
-        result = process(data, os.path.basename(args.input), args.align, formats or ["woff2"])
+        result = process(data, os.path.basename(args.input), args.align, formats or ["woff2"], args.nudge)
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1

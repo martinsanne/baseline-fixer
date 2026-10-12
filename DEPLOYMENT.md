@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying the Vertical Metrics Fixer app to production.
+This guide covers deploying the Baseline Fixer app to production.
 
 ## Option 1: Vercel (Recommended - All-in-One)
 

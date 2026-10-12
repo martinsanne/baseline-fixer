@@ -22,10 +22,12 @@ interface AlignmentCellProps {
   fontFamily: string;
   text: string;
   tone: 'before' | 'after';
+  /** Where the glyph center should sit relative to the box center, in font units. Non-zero after a manual nudge. */
+  intendedOffset?: number;
   className?: string;
 }
 
-export function AlignmentCell({ metrics, unitsPerEm, targetHeight, fontFamily, text, tone, className }: AlignmentCellProps) {
+export function AlignmentCell({ metrics, unitsPerEm, targetHeight, fontFamily, text, tone, intendedOffset = 0, className }: AlignmentCellProps) {
   const scale = FONT_SIZE / unitsPerEm;
   const ascent = metrics.ascent * scale;
   const descent = -metrics.descent * scale;
@@ -36,10 +38,11 @@ export function AlignmentCell({ metrics, unitsPerEm, targetHeight, fontFamily, t
   const boxCenter = boxTop + BOX_HEIGHT / 2;
   const glyphCenter = boxCenter + offsetUnits(metrics, targetHeight) * scale;
   const centered = Math.abs(glyphCenter - boxCenter) < 0.4;
+  const onTarget = Math.abs(glyphCenter - boxCenter - intendedOffset * scale) < 0.4;
 
   const guideX1 = 34;
   const guideX2 = WIDTH - 34;
-  const offsetColor = centered ? '#788c5d' : '#c6613f';
+  const offsetColor = onTarget ? '#788c5d' : '#c6613f';
 
   return (
     <svg

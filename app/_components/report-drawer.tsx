@@ -16,9 +16,10 @@ interface ReportDrawerProps {
   onNavigate: (id: string) => void;
   onClose: () => void;
   onDownload: (job: Job, choice: DownloadChoice) => void;
+  onNudge: (id: string, nudge: number) => void;
 }
 
-export function ReportDrawer({ open, job, readyJobs, onNavigate, onClose, onDownload }: ReportDrawerProps) {
+export function ReportDrawer({ open, job, readyJobs, onNavigate, onClose, onDownload, onNudge }: ReportDrawerProps) {
   const index = job ? readyJobs.findIndex((j) => j.id === job.id) : -1;
   const previous = index > 0 ? readyJobs[index - 1] : undefined;
   const next = index >= 0 && index < readyJobs.length - 1 ? readyJobs[index + 1] : undefined;
@@ -66,12 +67,17 @@ export function ReportDrawer({ open, job, readyJobs, onNavigate, onClose, onDown
               </div>
             </div>
             <div className="mt-4">
-              <DownloadControls onDownload={(choice) => onDownload(job, choice)} busy={job.busyFormat} />
+              <DownloadControls
+                onDownload={(choice) => onDownload(job, choice)}
+                busy={job.busyFormat}
+                disabled={job.status !== 'done'}
+              />
             </div>
           </header>
 
-          <div key={`${job.id}:${job.run}`} className="flex-1 overflow-y-auto overscroll-contain px-5 py-8 sm:px-8">
-            <AlignmentReport job={job} />
+          {/* Not keyed on run, so the report keeps its state while a nudge is applied. */}
+          <div key={`${job.id}:${job.result.align}`} className="flex-1 overflow-y-auto overscroll-contain px-5 py-8 sm:px-8">
+            <AlignmentReport job={job} onNudge={(nudge) => onNudge(job.id, nudge)} />
           </div>
         </>
       )}
